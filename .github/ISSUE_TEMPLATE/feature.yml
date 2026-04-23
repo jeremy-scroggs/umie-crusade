@@ -1,0 +1,58 @@
+name: Feature
+description: A new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: Milestone
+      options:
+        - M0 — Scaffold
+        - M1 — Vertical Slice
+        - M2 — Breadth
+        - M3 — Progression
+        - M4 — Polish & Launch
+    validations:
+      required: true
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Estimated Size
+      options:
+        - "S (< 1 hour)"
+        - "M (2-3 hours)"
+        - "L (half day+)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What needs to be built?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Checklist of conditions that must be true when this is done.
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: data-files
+    attributes:
+      label: Data Files Affected
+      description: Which JSON schemas or data files need creation/modification?
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Which issues must be completed before this one can start?

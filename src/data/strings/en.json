@@ -1,0 +1,14 @@
+{
+  "game.title": "Umie Crusade",
+  "hud.gold": "Gold",
+  "hud.wave": "Wave",
+  "hud.lives": "Lives",
+  "menu.start": "Begin Klerg",
+  "menu.settings": "Settings",
+  "menu.credits": "Credits",
+  "battle.waveStart": "ISE HAI!",
+  "battle.victory": "Bludchok-hai gug!",
+  "battle.defeat": "The fort has fallen...",
+  "battle.killConfirm": "Hedk'nah gug.",
+  "battle.bossWave": "KWAT DA TRA!"
+}
