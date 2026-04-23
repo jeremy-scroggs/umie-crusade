@@ -31,4 +31,5 @@ export const unitDefSchema = z.object({
   abilities: z.array(z.string()),
   unlockRequirement: z.string().nullable(),
   flavor: z.string(),
+  goldDrop: z.number().nonnegative().optional(),
 });

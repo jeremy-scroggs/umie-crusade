@@ -1,35 +1,43 @@
-export interface UnitStats {
-  hp: number;
-  dps: number;
-  speed: number;
-  armor: number;
-}
+import type { z } from 'zod';
+import type {
+  unitStatsSchema,
+  unitCostSchema,
+  respawnCostSchema,
+  unitDefSchema,
+} from '@/data/schemas/unit.schema';
+import type {
+  wallDefSchema,
+  towerDefSchema,
+  buildingDefSchema,
+} from '@/data/schemas/building.schema';
+import type {
+  waveSpawnSchema,
+  waveDefSchema,
+  spawnEdgeSchema,
+} from '@/data/schemas/wave.schema';
+import type {
+  heroAbilitySchema,
+  heroDefSchema,
+} from '@/data/schemas/hero.schema';
+import type { stringsDefSchema } from '@/data/schemas/strings.schema';
 
-export interface UnitCost {
-  gold: number;
-  trainTime: number;
-}
+export type UnitStats = z.infer<typeof unitStatsSchema>;
+export type UnitCost = z.infer<typeof unitCostSchema>;
+export type RespawnCost = z.infer<typeof respawnCostSchema>;
+export type UnitDef = z.infer<typeof unitDefSchema>;
 
-export interface RespawnCost {
-  gold: number;
-  time: number;
-}
+export type WallDef = z.infer<typeof wallDefSchema>;
+export type TowerDef = z.infer<typeof towerDefSchema>;
+export type BuildingDef = z.infer<typeof buildingDefSchema>;
 
-export interface UnitDef {
-  id: string;
-  name: string;
-  bloodline: string;
-  category: 'melee' | 'ranged' | 'caster' | 'builder' | 'siege' | 'healer' | 'fodder';
-  faction: 'orc' | 'human';
-  stats: UnitStats;
-  cost: UnitCost;
-  respawnCost?: RespawnCost;
-  sprite: string;
-  animations: string[];
-  abilities: string[];
-  unlockRequirement: string | null;
-  flavor: string;
-}
+export type SpawnEdge = z.infer<typeof spawnEdgeSchema>;
+export type WaveSpawn = z.infer<typeof waveSpawnSchema>;
+export type WaveDef = z.infer<typeof waveDefSchema>;
+
+export type HeroAbility = z.infer<typeof heroAbilitySchema>;
+export type HeroDef = z.infer<typeof heroDefSchema>;
+
+export type StringsDef = z.infer<typeof stringsDefSchema>;
 
 export interface Resource {
   gold: number;
