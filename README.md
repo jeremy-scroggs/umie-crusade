@@ -69,6 +69,10 @@ This project follows a structured feature pipeline. See [docs/PROJECT_PLAN.md](d
 
 The Bloodrock Clan lore is the player-author's own creation. See [docs/LORE.md](docs/LORE.md) for the full lore bible.
 
+## Built With
+
+This project is co-authored with [Claude Code](https://claude.ai/claude-code) (Anthropic).
+
 ## License
 
 [MIT](LICENSE)
