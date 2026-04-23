@@ -2,7 +2,7 @@
 
 A web-based, mobile-responsive, top-down pixel-art orc base/tower-defense hybrid.
 
-[![CI](https://github.com/YOUR_USERNAME/umie-crusade/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/umie-crusade/actions/workflows/ci.yml)
+[![CI](https://github.com/jeremy-scroggs/umie-crusade/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremy-scroggs/umie-crusade/actions/workflows/ci.yml)
 
 <!-- TODO: add screenshot after M1 -->
 
@@ -26,7 +26,7 @@ Command a small band of Bloodrock orcs who have fallen through a portal into a s
 ## Getting Started
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/umie-crusade.git
+git clone https://github.com/jeremy-scroggs/umie-crusade.git
 cd umie-crusade
 pnpm install
 pnpm dev
