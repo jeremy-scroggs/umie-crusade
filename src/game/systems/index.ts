@@ -32,3 +32,14 @@ export type {
   RespawnSuccess,
   RespawnFailure,
 } from './Economy';
+export { AISystem, HumanState, OrcState } from './AI';
+export type {
+  AISystemOptions,
+  HumanInstance,
+  OrcInstance,
+  HumanBehavior,
+  OrcBehavior,
+  HumanStateName,
+  OrcStateName,
+  WallLike,
+} from './AI';
