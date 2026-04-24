@@ -1,0 +1,16 @@
+{
+  "id": "wall-wood",
+  "name": "Wood Wall",
+  "category": "wall",
+  "hp": 100,
+  "armor": 0,
+  "buildCost": { "gold": 20 },
+  "repairCost": { "goldPerHp": 1 },
+  "damageStates": [
+    { "hpThreshold": 1.0, "sprite": "buildings/wall-wood-pristine.png" },
+    { "hpThreshold": 0.66, "sprite": "buildings/wall-wood-cracked.png" },
+    { "hpThreshold": 0.33, "sprite": "buildings/wall-wood-crumbling.png" }
+  ],
+  "sprite": "buildings/wall-wood-pristine.png",
+  "flavor": "Nub pass!"
+}

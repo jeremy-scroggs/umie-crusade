@@ -1,0 +1,16 @@
+{
+  "id": "ballista",
+  "name": "Ballista",
+  "category": "tower",
+  "hp": 80,
+  "armor": 1,
+  "buildCost": { "gold": 60 },
+  "combat": {
+    "range": 240,
+    "damage": 20,
+    "attackRate": 0.8,
+    "projectileSpeed": 300
+  },
+  "sprite": "buildings/ballista.png",
+  "flavor": "Zakk! Boom-stikk go!"
+}
