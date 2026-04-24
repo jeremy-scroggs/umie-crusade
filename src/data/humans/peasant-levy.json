@@ -1,0 +1,15 @@
+{
+  "id": "peasant-levy",
+  "name": "Peasant Levy",
+  "bloodline": "none",
+  "category": "fodder",
+  "faction": "human",
+  "stats": { "hp": 20, "dps": 3, "speed": 70, "armor": 0 },
+  "cost": { "gold": 0, "trainTime": 0 },
+  "sprite": "humans/peasant-levy.png",
+  "animations": ["idle", "walk", "attack", "death"],
+  "abilities": [],
+  "unlockRequirement": null,
+  "flavor": "Demon! Demon!",
+  "goldDrop": 4
+}
