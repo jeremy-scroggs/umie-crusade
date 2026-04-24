@@ -149,3 +149,68 @@
 - **Worker should run `pnpm install --frozen-lockfile` first** (or document that a missing node_modules is a known constraint and validators should run against the main repo). Either way, surface this in the worker prompt.
 - **Consider squashing the per-issue plan doc commits** into the artifacts commit at milestone end. Currently every feature branch carries its own plan doc as a separate file in main — 5 plan docs in main now. That's fine but could be a single `docs/plans/M1-PLANS.md` consolidated doc.
 - **Audit #5's `public/data/maps/m1-slice.json`** — decide whether it's needed.
+
+---
+
+# M1 Retro Metrics — Dry-run wave 3
+
+**Started:** 2026-04-24T21:17:05Z
+**Ended:** 2026-04-24T21:33:04Z
+**Main SHA at start:** a27ab93
+**Main SHA at end:** 343ed83
+**Scope:** Wave 3 dry-run targeting #7 (pathfinding), #8 (combat), #18 (hero-create UI). Tests skill v3 patches (stash dance codified, `pnpm install --frozen-lockfile` allowed). First wave to include React UI work and the first auto-resolved structured conflict.
+
+## Per-issue
+
+### #7 feat(pathfinding): easystarjs A* + wall recompute
+- **Worker timing:** plan 2m 0s, impl 1m 55s, validate 13s. Wall-clock ≈ 4m 8s.
+- **Orchestrator merge:** ~3m. FAST-PATH (base = main at dispatch).
+- **Plan vs actual files:** 5 created. Match.
+- **Conflict:** none (fast-path).
+- **Bail:** —
+- **Decisions made:** Reused #6's `EventEmitterLike` / `SimpleEventEmitter` pattern. easystarjs sync mode for deterministic perf. Walls + water always impassable; forest passable but `blocksSight`. Cache invalidated on wall events.
+- **Tests:** 73 → 83 (+10).
+
+### #8 feat(combat): damage system + ballista projectiles
+- **Worker timing:** plan 2m 3s, impl 2m 34s, validate 13s. Wall-clock ≈ 4m 50s.
+- **Orchestrator merge:** ~6m. SLOW-PATH (rebased onto c9e4618). **Auto-resolved an additive conflict** on `src/game/systems/index.ts` — both #7 and #8 created the file with their respective exports. Structured-conflict resolver kept both sides; rebase continued cleanly.
+- **Plan vs actual files:** 7 created. Match.
+- **Conflict:** auto-resolved additive (systems/index.ts barrel exports).
+- **Bail:** —
+- **Decisions made:** Tick-based update loop. `DEFAULT_HIT_RADIUS = 6` documented as physics constant (not balance). DamageSystem orchestrates; doesn't reimplement Damageable.
+- **Tests:** 83 → 100 (+17).
+
+### #18 feat(ui): hero-creation page + metaStore + run signal
+- **Worker timing:** plan 1m 58s, impl 6m 0s, validate 17s. Wall-clock ≈ 8m 19s.
+- **Orchestrator merge:** ~6m. SLOW-PATH (rebased onto 1c2244f). Clean rebase.
+- **Plan vs actual files:** 16 created/modified. High file count justified — first React UI requires building atom layer (Button, TextInput) + molecule (BloodlineCard) + organism + page + new metaStore + runSignal + types update + 4 test files + Vite/test config patches.
+- **Conflict:** none on rebase.
+- **Bail:** —
+- **Decisions made:** Zustand `persist` middleware for localStorage. `runSignal` as a bare event emitter for React→Phaser handoff (not a Zustand action). Mobile 375px verification deferred to human review (no browser available — documented). Tailwind mobile-first defaults + ≥44px tap targets used by convention.
+- **Anomalies handled by worker:**
+  1. Node 25's incomplete built-in `localStorage` overrode jsdom's — worker added a shim in `tests/setup.ts`.
+  2. Vitest config missing automatic JSX — worker patched `vitest.config.ts`.
+  Both are additive infrastructure fixes; worth a human review for whether they should land long-term.
+- **Tests:** 100 → 118 (+18).
+
+## Summary
+
+- **Wall-clock:** 15m 59s (dispatch → final merge of #18).
+- **Issues merged:** 3 / 3 (100%).
+- **Blocked:** 0.
+- **Auto-resolved conflicts:** 1 (systems/index.ts — additive barrel exports).
+- **Biggest time burn:** #18 (impl 6m + merge 6m). Expected — full React feature including atoms/molecules/organism/page/store + first-time test infra patches.
+- **Plan/actual drift:**
+  - #18 added Vite/Vitest config patches not in the original "Files affected" list. Necessary for the work but worth a code-review note.
+
+## Skill v3 patches: results
+
+- **Stash dance codified.** Worked cleanly for #8 and #18 slow-paths. No surprises.
+- **`pnpm install --frozen-lockfile` allowance.** None of the 3 workers reported the bootstrap problem from wave 2 — they handled it cleanly per the new instruction. (Or they didn't need it because the harness pre-installed; either way the rule wasn't tripped.)
+- **Structured-conflict auto-resolve.** First time fired in production. Verified working on additive-only conflict (systems/index.ts). The resolver wrote a valid concatenated file and rebase --continue succeeded without manual intervention.
+
+## Recommendations for skill v4
+
+- **Worker should NOT modify `vitest.config.ts` without flagging.** Config changes are infrastructure, not feature work. Add a soft rule: "if you need to modify build/test config, document the change prominently in `## Decisions` and consider whether it should be a separate issue." Code-review can override.
+- **Plan doc count is creeping.** After 8 merged issues, main has 8 plan docs in `docs/plans/`. Worth bundling them at milestone end — defer to M1 retrospective.
+- **#18 worker's tests/setup.ts patch** also worth a human eye — Node 25 vs jsdom localStorage shim could break in different envs.
