@@ -69,7 +69,7 @@ Reference feel: **Orcs Must Die!** meets **Dungeon Warfare** meets **Kingdom Rus
 | Testing | **Vitest** + Testing Library + unit tests for game logic | Data-driven systems easy to test in isolation |
 | PWA | Vite PWA plugin (Workbox) | Installable on mobile; offline after first load |
 | Package manager | **pnpm** | Faster than npm, clean lockfile |
-| CI | **GitHub Actions** | Typecheck, lint, test, data-validate on every PR |
+| CI | **GitHub Actions** | Typecheck, lint, test, data-validate on every push |
 | Hosting | **Vercel** or **Netlify** (static) | Free tier fine for MVP |
 
 **Deliberate "not yet":** no backend/DB, no ECS library, no Electron/Capacitor wrapper, no multiplayer, no analytics.
@@ -323,7 +323,7 @@ Grid logic is tile-size-agnostic. `TILE_SIZE` is one config value. Prototype wit
 
 ## 8. Workflow Alignment
 
-Per-feature application of the review → plan → execute → commit → validate → harden → pr skills:
+Per-feature application of the review → plan → execute → commit → validate → harden → merge skills:
 
 | Phase | Output |
 |---|---|
