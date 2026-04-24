@@ -214,3 +214,76 @@
 - **Worker should NOT modify `vitest.config.ts` without flagging.** Config changes are infrastructure, not feature work. Add a soft rule: "if you need to modify build/test config, document the change prominently in `## Decisions` and consider whether it should be a separate issue." Code-review can override.
 - **Plan doc count is creeping.** After 8 merged issues, main has 8 plan docs in `docs/plans/`. Worth bundling them at milestone end — defer to M1 retrospective.
 - **#18 worker's tests/setup.ts patch** also worth a human eye — Node 25 vs jsdom localStorage shim could break in different envs.
+
+---
+
+# M1 Retro Metrics — Dry-run wave 4
+
+**Started:** 2026-04-24T21:54:21Z
+**Ended:** 2026-04-24T22:08:35Z
+**Main SHA at start:** 5a19762
+**Main SHA at end:** 7d91b7d
+**Scope:** Wave 4 dry-run targeting #9 (AI), #13 (economy), #16 (hero ability). First wave where all 3 workers modified shared barrel/store files concurrently. Expected 2-3 additive conflicts.
+
+## Per-issue
+
+### #13 feat(economy): gold + respawn + wave rewards
+- **Worker timing:** plan 2m 4s, impl 2m 31s, validate 10s. Wall-clock ≈ 4m 45s.
+- **Orchestrator merge:** ~1m. FAST-PATH (first to finish, base = main).
+- **Plan vs actual files:** 6 created. Match.
+- **Conflict:** none (fast-path).
+- **Bail:** —
+- **Decisions made:** Discriminated `{ok, reason}` return for `respawn()` — no throws. `gameStore.spendGold` already satisfied "insufficient gold" contract, no new API needed.
+- **Tests:** 118 → 131 (+13).
+
+### #16 feat(hero): Clomp'uk slam + AoE stun
+- **Worker timing:** plan 2m 5s, impl 2m 51s, validate 0s. Wall-clock ≈ 4m 56s.
+- **Orchestrator merge:** ~3m. SLOW-PATH (rebased onto 8e751fc). **`src/state/gameStore.ts` modified by both #13 and #16 — git's auto-merge handled it cleanly** (different sections). No structured-resolver invocation needed.
+- **Plan vs actual files:** 9 created/modified.
+- **Conflict:** none on rebase (git auto-merge on gameStore.ts).
+- **Bail:** —
+- **Decisions made:** Separate `Hero` class over extending `Orc` (different def shape). Pure-function `tryUseAbility(ctx)` — caller owns clock and spatial query. Structural-type `HeroAbilityTargetLike` with `stunnedUntilMs` timestamp — one-line follow-up if #9 uses different shape.
+- **Tests:** 131 → 150 (+19).
+
+### #9 feat(ai): human + orc behavior FSMs
+- **Worker timing:** plan 2m 36s, impl 4m 8s, validate 0s. Wall-clock ≈ 6m 44s.
+- **Orchestrator merge:** ~5m. SLOW-PATH (rebased onto 7d182ce). **Auto-resolved additive conflict on `src/game/systems/index.ts`** — main had #13's Economy exports, incoming had #9's AI exports. Structured-conflict resolver concatenated both sides cleanly.
+- **Plan vs actual files:** 4 created. Match.
+- **Conflict:** auto-resolved additive (systems/index.ts).
+- **Bail:** —
+- **Decisions made:** On `path:invalidated`, keep stale path while async `findPath` resolves — lets human reach blocking wall before falling to IDLE. Found via one-iteration test failure (first-try recovery).
+- **Tests:** 150 → 158 (+8).
+
+## Summary
+
+- **Wall-clock:** 14m 14s (dispatch → final merge of #9).
+- **Issues merged:** 3 / 3 (100%).
+- **Blocked:** 0.
+- **Auto-resolved conflicts:** 1 (systems/index.ts — structured resolver). One git-native auto-merge on gameStore.ts (different sections — didn't need structured resolver).
+- **Biggest time burn:** #9 (worker 6m 44s + merge 5m). Most complex issue this wave — full FSM with path integration.
+- **Plan/actual drift:** none — all three workers matched their "Files affected" within expected scope creep.
+
+## Skill v3 patches: continued validation
+
+- **Stash dance:** worked for both #16 and #9 slow-paths. Minor friction but reliable.
+- **Structured-conflict auto-resolve:** second production trigger (systems/index.ts again — barrel files are the main conflict surface). Handled cleanly.
+- **Git-native merge:** notably, gameStore.ts (modified by #13 and #16 at different sections) merged without conflict via git's 3-way merge. Good — not every shared-file touch needs the structured resolver.
+
+## Observations
+
+1. **Barrel files are the predictable conflict surface.** Every wave so far has had at least one additive conflict on a barrel (`systems/index.ts`, `entities/index.ts`, `components/index.ts`). The structured resolver handles these reliably. Alternative: restructure barrels to be append-only (e.g. one file per export) — but that's more refactor than win at this stage.
+2. **gameStore.ts parallelism works.** When workers add to different sections of the same file, git's 3-way merge handles it. No structured resolver needed. Confirms the "add-only" worker discipline rule is effective.
+3. **Cost scaling.** Wave 4 token use: #9=95k, #13=71k, #16=77k. Total ~243k. Similar to wave 2 despite all 3 being meatier implementation issues. Workers are getting more efficient at scoping.
+
+## M1 progress at end of wave 4
+
+- **Merged: 14 / 23** (#1-9, #11-13, #16, #18)
+- **Paused: 9** (#10, #14, #15, #17, #19, #20, #21, #22, #23)
+
+## Newly unblocked after wave 4
+
+- **#10** (wave spawner) needs #3 ✓ + #9 ✓ → READY
+- **#14** (building placement) needs #11 ✓ + #7 ✓ + #13 ✓ → READY
+- **#17** (HUD) needs #4 ✓ + #13 ✓ + #16 ✓ → READY
+
+Three ready for wave 5 — perfect batch.
