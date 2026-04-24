@@ -13,3 +13,11 @@ export type {
   WallEventPayload,
   PathEventPayload,
 } from './events';
+export { DamageSystem } from './Damage';
+export type {
+  DamageSystemOptions,
+  MeleeAttackerLike,
+  TowerLike,
+  SelectTargetFn,
+  RegisteredTower,
+} from './Damage';
