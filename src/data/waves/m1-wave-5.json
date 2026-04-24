@@ -1,0 +1,36 @@
+{
+  "id": "m1-wave-5",
+  "number": 5,
+  "spawns": [
+    {
+      "unitId": "peasant-levy",
+      "count": 8,
+      "edge": "N",
+      "startDelay": 2.0,
+      "interval": 1.0
+    },
+    {
+      "unitId": "peasant-levy",
+      "count": 7,
+      "edge": "S",
+      "startDelay": 4.0,
+      "interval": 1.0
+    },
+    {
+      "unitId": "peasant-levy",
+      "count": 6,
+      "edge": "W",
+      "startDelay": 6.0,
+      "interval": 1.0
+    },
+    {
+      "unitId": "peasant-levy",
+      "count": 5,
+      "edge": "N",
+      "startDelay": 18.0,
+      "interval": 0.9
+    }
+  ],
+  "reward": { "gold": 100 },
+  "cry": "battle.bossWave"
+}

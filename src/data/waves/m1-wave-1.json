@@ -1,0 +1,15 @@
+{
+  "id": "m1-wave-1",
+  "number": 1,
+  "spawns": [
+    {
+      "unitId": "peasant-levy",
+      "count": 5,
+      "edge": "N",
+      "startDelay": 2.0,
+      "interval": 1.8
+    }
+  ],
+  "reward": { "gold": 25 },
+  "cry": "battle.waveStart"
+}
