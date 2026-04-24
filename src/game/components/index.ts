@@ -8,3 +8,5 @@ export { Breakable } from './Breakable';
 export type { BreakableOptions, DamageState } from './Breakable';
 export { Upgradeable } from './Upgradeable';
 export type { UpgradeableOptions, UpgradeOption } from './Upgradeable';
+export { Ability } from './Ability';
+export type { AbilityOptions, AbilityUsedPayload } from './Ability';

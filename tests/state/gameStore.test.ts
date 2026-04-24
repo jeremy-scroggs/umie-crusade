@@ -70,6 +70,37 @@ describe('gameStore', () => {
     expect(state.wave).toBe(0);
     expect(state.lives).toBe(10);
   });
+
+  describe('heroAbility slice', () => {
+    it('starts empty (cooldownMs 0, readyAtMs null)', () => {
+      const { heroAbility } = useGameStore.getState();
+      expect(heroAbility.cooldownMs).toBe(0);
+      expect(heroAbility.readyAtMs).toBe(null);
+    });
+
+    it('setHeroAbilityCooldown records both values', () => {
+      useGameStore.getState().setHeroAbilityCooldown(12000, 13000);
+      const { heroAbility } = useGameStore.getState();
+      expect(heroAbility.cooldownMs).toBe(12000);
+      expect(heroAbility.readyAtMs).toBe(13000);
+    });
+
+    it('clearHeroAbility resets the slice', () => {
+      useGameStore.getState().setHeroAbilityCooldown(12000, 13000);
+      useGameStore.getState().clearHeroAbility();
+      const { heroAbility } = useGameStore.getState();
+      expect(heroAbility.cooldownMs).toBe(0);
+      expect(heroAbility.readyAtMs).toBe(null);
+    });
+
+    it('reset clears the heroAbility slice as well', () => {
+      useGameStore.getState().setHeroAbilityCooldown(12000, 13000);
+      useGameStore.getState().reset();
+      const { heroAbility } = useGameStore.getState();
+      expect(heroAbility.cooldownMs).toBe(0);
+      expect(heroAbility.readyAtMs).toBe(null);
+    });
+  });
 });
 
 describe('gameStore + Economy — kill -> respawn -> wave-complete math (AC)', () => {

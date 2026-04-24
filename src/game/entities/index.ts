@@ -7,3 +7,11 @@ export type {
   TargetLike,
   Vec2,
 } from './Projectile';
+export { Hero } from './Hero';
+export type {
+  HeroAbilityContext,
+  HeroAbilityHit,
+  HeroAbilityResult,
+  HeroAbilityTargetLike,
+  HeroAbilityUsedPayload,
+} from './Hero';
