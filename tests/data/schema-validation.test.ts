@@ -198,4 +198,16 @@ describe('strings schema', () => {
   it('rejects a non-string value', () => {
     expect(stringsDefSchema.safeParse({ 'hud.gold': 1 }).success).toBe(false);
   });
+
+  it('rejects a bundle missing a required key', () => {
+    const { 'hud.gold': _dropped, ...withoutHudGold } = enStrings;
+    void _dropped;
+    expect(stringsDefSchema.safeParse(withoutHudGold).success).toBe(false);
+  });
+
+  it('rejects an empty string value', () => {
+    expect(
+      stringsDefSchema.safeParse({ ...enStrings, 'hud.gold': '' }).success,
+    ).toBe(false);
+  });
 });
