@@ -1,0 +1,22 @@
+{
+  "id": "mougg-r-hero",
+  "name": "Mougg'r",
+  "bloodline": "mougg-r",
+  "category": "melee",
+  "faction": "orc",
+  "stats": { "hp": 260, "dps": 22, "speed": 55, "armor": 5 },
+  "cost": { "gold": 150, "trainTime": 12 },
+  "respawnCost": { "gold": 80, "time": 30 },
+  "sprite": "orcs/mougg-r-hero.png",
+  "animations": ["idle", "walk", "attack", "ability", "death"],
+  "abilities": ["clompuk"],
+  "unlockRequirement": null,
+  "flavor": "KWAT DA TRA!",
+  "ability": {
+    "id": "clompuk",
+    "damage": 30,
+    "radius": 64,
+    "stunMs": 1500,
+    "cooldownMs": 12000
+  }
+}
