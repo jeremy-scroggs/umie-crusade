@@ -12,6 +12,7 @@ export type {
   GameEventName,
   WallEventPayload,
   PathEventPayload,
+  WaveCompletePayload,
 } from './events';
 export { DamageSystem } from './Damage';
 export type {
@@ -21,3 +22,13 @@ export type {
   SelectTargetFn,
   RegisteredTower,
 } from './Damage';
+export { Economy } from './Economy';
+export type {
+  EconomyOptions,
+  EconomyStoreLike,
+  EconomyHumanLike,
+  EconomyOrcLike,
+  RespawnResult,
+  RespawnSuccess,
+  RespawnFailure,
+} from './Economy';

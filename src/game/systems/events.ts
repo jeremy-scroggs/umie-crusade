@@ -29,6 +29,12 @@ export const GameEvents = {
    * Fires after `PathInvalidated`.
    */
   PathRecompute: 'path:recompute',
+  /**
+   * Emitted by the wave-spawning system when all spawns for a wave have
+   * been defeated. Economy listens and credits `reward.gold`.
+   * Payload: `WaveCompletePayload`.
+   */
+  WaveComplete: 'wave:complete',
 } as const;
 
 export type GameEventName = (typeof GameEvents)[keyof typeof GameEvents];
@@ -48,3 +54,16 @@ export interface WallEventPayload {
  * means extending without a breaking change.
  */
 export type PathEventPayload = Record<string, never>;
+
+/**
+ * Payload for `wave:complete`. `waveId` + `waveNumber` come from the
+ * wave def (`src/data/waves/*.json`); `reward.gold` is the wave's
+ * configured completion bonus.
+ */
+export interface WaveCompletePayload {
+  waveId: string;
+  waveNumber: number;
+  reward: {
+    gold: number;
+  };
+}
