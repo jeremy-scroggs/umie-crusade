@@ -1,140 +1,158 @@
-# Proposal — Parallel issue workflow for M1
+# Proposal — Autonomous parallel workflow for milestones
 
-**Status:** Draft for user review. No code changes yet.
+**Status:** Finalized design reflecting decisions locked in. Implementation follows separately.
 
 ## Goal
 
-Run multiple Milestone issues in tandem — plan several at once, execute several at once, merge serially — so a milestone completes in fewer calendar days without losing the per-issue gate model. Each phase must produce a durable artifact so any agent (including a fresh session) can resume cold.
+Run multiple issues within a milestone in tandem and autonomously — each worker plans, implements, and validates without approval gates — so a milestone completes in fewer calendar days with a single human hand on the wheel (the main Claude session). At the end of each milestone we retrospect on where time and tokens went and feed that into streamlining the next one.
 
 ## Non-goals
 
-- Fully autonomous "finish M1 while you sleep" — deferred until the batch flow feels trustworthy.
-- Auto-merge on green — merge stays a human-initiated `/merge` call.
-- Parallel merging — merges remain serial so conflicts surface one at a time.
+- Fully autonomous cross-milestone runs — a human decides when a milestone begins.
+- Parallel merging — merges stay serial so conflicts surface one at a time.
+- Cross-Claude-session continuity as a requirement — though cold-resume is cheap by design.
+
+## Decisions locked in
+
+- **Batch size cap:** 3 parallel workers at a time.
+- **Retry cap:** 3 attempts per failing check (typecheck / lint / test / validate:data), then bail.
+- **Auto-merge:** yes, with rollback. Merged feature branches retained for the milestone so `git reset --hard <sha>` can cleanly undo any merge.
+- **Orchestrator location:** main Claude session, in the main checkout. Live progress visible; user can intervene but doesn't need to.
+- **Skill + `CLAUDE.md` visibility:** both remain gitignored (private process). Worker subagents do **not** invoke `/skill` calls — the workflow is embedded verbatim in every worker prompt.
 
 ## Architecture
 
 ```
-       ┌── plan agent (worktree #1, issue #N1) ─┐
-user ──┼── plan agent (worktree #2, issue #N2) ─┼── plan docs → batch review
-       └── plan agent (worktree #3, issue #N3) ─┘
-
-       ┌── execute agent (worktree #1) ─┐
-user ──┼── execute agent (worktree #2) ─┼── commits on branches → serial /merge
-       └── execute agent (worktree #3) ─┘
+main session (orchestrator, in main checkout)
+├── reads status board, computes ready-to-plan and ready-to-execute issues
+├── spawns up to 3 workers in git worktrees (run_in_background)
+│   └── each worker: research → plan → implement → gate → commit (on its own branch)
+├── receives worker-done notifications
+└── merges validated branches serially (rebase-on-divergence, bail on semantic conflict)
 ```
 
-### Isolation
+**Per-issue lifecycle:**
 
-Each parallel agent runs with the `Agent` tool's `isolation: "worktree"` option. That gives it:
-- A temporary `git worktree` on a fresh branch
-- Its own copy of `node_modules` would be wasteful — the worktree shares the repo's node_modules, which is fine as long as agents don't `pnpm install` in parallel (they won't, unless the plan adds a dep)
+1. **Select.** Orchestrator picks the next `queued` issue whose deps are `merged`, up to the batch cap.
+2. **Dispatch.** Spawns `Agent(subagent_type: "general-purpose", isolation: "worktree", run_in_background: true)`. The prompt embeds the full workflow — there is no reliance on `/skill`.
+3. **Work.** Worker commits on `feat/<N>-<slug>`. Never pushes. Never merges. Ends in `validated` or `blocked`.
+4. **Merge.** On each worker completion, orchestrator in the main checkout handles the serial merge (auto-rebase, structured conflict resolution, ff-only merge, push, retain branch).
+5. **Iterate.** Orchestrator immediately dispatches the next now-unblocked issue.
 
-### Status board
+## Worker prompt contract
 
-Single source of truth: `docs/plans/M1-STATUS.md`. One-line-per-issue table:
+The worker never sees project skills or `CLAUDE.md`. Every prompt spawned by the orchestrator embeds:
+
+- **Project context:** canon rules extracted from `CLAUDE.md` — data-driven (all balance in `src/data/*.json`), atomic design for React, composition for Phaser, kebab-case assets, mobile-first, conventional commits.
+- **Issue details:** `gh issue view <N>` output inlined so the worker doesn't need to re-fetch.
+- **Workflow steps** in order: research → write plan doc → create branch → implement → run local gate → commit → update status board.
+- **Autonomy rules and bail conditions** (below).
+- **Metrics to report** on exit (below).
+
+The orchestrator has a single prompt template; per-issue variation is small (number, title, deps-resolved context, current main SHA).
+
+## Autonomy rules
+
+- **Ambiguity in the issue:** choose the most conservative interpretation that avoids downstream constraints, document the decision + reasoning in the plan doc's `## Decisions` section, continue. Do not stop and ask.
+- **Scope creep:** always defer. The issue's acceptance criteria bound the scope.
+- **No `EnterPlanMode` / `ExitPlanMode`:** workers don't use plan mode at all. They write the plan file and proceed.
+- **Commit message is generated:** template `<type>(<scope>): <short-description>, closes #<N>`. No confirmation.
+- **New npm dependency:** NOT allowed mid-run. Bail with `blocked: needs-dep-<name>`.
+- **Edit discipline on shared files:** workers may edit shared files (e.g. `src/data/schemas/index.ts` registry) but only via additive changes. Never re-order. Never delete other entries.
+
+## Bail conditions
+
+A worker exits cleanly marking `blocked: <reason>` in its status row when any of these hit:
+
+- 3 consecutive failed attempts at the same check
+- A new dependency would be required
+- A required upstream data file referenced by the plan is missing
+- Irreconcilable conflict between issue scope and existing code
+
+Orchestrator treats `blocked` as a pause — the worktree and branch are retained; the issue is skipped; the user unblocks manually later.
+
+## Auto-merge + conflict handling
+
+When a worker finishes with `validated`, orchestrator in the main checkout:
+
+1. `git fetch origin && git pull --ff-only origin main` — sync main.
+2. `git checkout <feature-branch> && git rebase main`.
+3. **Clean rebase** → checkout main, `git merge --ff-only <branch>`, run local gate, push. Record `merged` with SHA in the status board.
+4. **Structured conflict** (both sides appending additively to a list/registry/barrel — detectable when each conflict hunk's `<<<<<<<` and `>>>>>>>` sides are both pure additions): concatenate both, continue rebase, proceed to merge.
+5. **Semantic conflict** (anything else): mark `blocked: merge-conflict`, leave the branch untouched, continue to the next issue.
+6. **Post-merge local-gate failure** (rare — rebase introduced a silent break): revert via `git reset --hard <last-known-good-sha>`, mark `blocked: post-merge-gate-failure`, surface to user. Retained per-milestone branches make the revert clean.
+
+Force-push to main is never done automatically. The only time force-push to main happens is when the user explicitly authorizes a rollback.
+
+## Rollback strategy
+
+- Feature branches are **retained** through the milestone — not deleted at merge time.
+- Orchestrator keeps a `merged:` list in the status board with SHAs.
+- To revert: `git reset --hard <sha-before-bad-merge>`, user-confirmed force-push.
+- At milestone end, after user ratifies, branches are bulk-deleted.
+
+## Status board
+
+Location: `docs/plans/status/M<N>.md` — one file per milestone.
 
 ```markdown
-| # | Title | Phase | Branch | Plan doc | Depends on |
-|---|---|---|---|---|---|
-| 1 | data(schemas) | merged | — | PLAN-01-zod-schemas.md | — |
-| 2 | data(units) | planned | feat/2-units (worktree) | PLAN-02-units.md | #1 |
-| 3 | data(waves) | planning | — | — | #1 |
+| # | Title | Phase | Branch | Plan doc | Depends on | Started | Ended | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 1 | data(schemas) | merged | — | PLAN-01-zod-schemas.md | — | 2026-04-23 12:34 | 2026-04-23 14:10 | sha f25fdd6 |
+| 2 | data(units) | executing | feat/2-units | PLAN-02-units.md | #1 | 2026-04-23 14:12 | — | — |
+| 11 | data(buildings) | queued | — | — | #1 | — | — | — |
 ```
 
-**Phases:** `queued → planning → planned → executing → validated → merged` (or `blocked`).
+**Phases:** `queued → planning → planned → executing → validated → merged`, or `blocked: <reason>`.
 
-Every agent:
-1. Reads this file on start to know its context.
-2. Updates its own row when transitioning phases.
-3. Never edits another issue's row.
+**Edit discipline:** each worker edits only its own row; orchestrator edits merge-phase columns (`Ended`, `Notes`, phase flip to `merged`). Parallel single-row edits via `Edit` tool with row-unique `old_string` are safe.
 
-### Dependency resolution
+## Retro metrics
 
-Agents pick work only when all its `Depends on` issues are `merged`. The driver skill computes "ready to plan / ready to execute" sets from the status board. For M1 the DAG is in the issue bodies' `Dependencies` section; I'll extract it once into the status board and keep it static.
+Location: `docs/plans/retro/M<N>-metrics.md`. Appended per issue on completion.
 
-## New / changed skills
+For each issue:
+- Timestamps per phase (planning, executing, validated, merged)
+- Token usage per phase (if available from Claude Code runtime)
+- Files-created-vs-plan delta — did the plan match reality?
+- Conflict encountered: none / auto-resolved / blocked
+- Bail reason, if any
+- Test count before vs. after
 
-### New: `/batch-plan <issue...>`
-Driver that takes N issue numbers, spawns N parallel `Agent(subagent_type: general-purpose, isolation: "worktree")` instances. Each one:
-1. Runs `/review` internally (reads issue + explores).
-2. Runs `/plan` in auto mode (see below) — writes `docs/plans/PLAN-NN-<slug>.md` to the main repo's worktree.
-3. Updates its row in `M1-STATUS.md` to `planned`.
-4. Exits.
-
-Driver then prints a summary: N plan docs written, paths listed. User reviews all at once, edits plans directly if needed, signals approval.
-
-### New: `/batch-execute <issue...>`
-Takes N issue numbers that are `planned`, spawns N parallel execute agents. Each one:
-1. Reads its plan doc.
-2. Creates branch `feat/NN-<slug>` inside its worktree.
-3. Runs `/execute` + `/validate` + `/commit` in auto mode.
-4. Updates row to `validated`.
-5. Exits without pushing or merging.
-
-Driver prints summary: which branches are ready to merge, in what dep order. User runs `/merge` on each in order.
-
-### Changed: `/plan --auto`
-- Current: interactive, blocks on `ExitPlanMode`.
-- Auto mode: writes the plan file and exits without calling `ExitPlanMode`. Does not execute code. Meant only for use from a batch driver.
-- Interactive `/plan` unchanged for solo use.
-
-### Changed: `/commit --auto`
-- Current: asks for message approval.
-- Auto mode: generates message from conventional-commit prefix + plan title + `closes #N`, commits without asking.
-- Interactive unchanged.
-
-### Unchanged: `/merge`
-Stays serial, stays user-invoked. Each call merges one branch; conflicts get manual resolution. The parallel flow ends at "branches ready" — the serial bottleneck is intentional.
+At milestone end, orchestrator produces a retro summary: which phases burned the most tokens, which issues had the biggest plan-vs-reality drift, which bails were preventable. That feeds the next milestone's workflow tweaks.
 
 ## Safe stops
 
-"Safe stop" == every phase produces one of these artifacts:
+Every phase ends with a durable artifact. Fresh sessions resume by reading the status board and inspecting artifacts.
 
 | Phase | Artifact | Resume signal |
 |---|---|---|
-| queued | row in `M1-STATUS.md` | none — just pick it up |
-| planning | none yet | agent bailed mid-review — restart fresh |
-| planned | `docs/plans/PLAN-NN-<slug>.md` | plan doc exists |
-| executing | commits on `feat/NN-<slug>` | branch exists, plan doc present |
-| validated | same commits + status row says `validated` | branch exists, green gate already verified |
-| merged | SHA on main | commit message has `closes #N` |
+| queued | row in status board | none — just pick up |
+| planning | none yet | mid-research — restart worker clean |
+| planned | `docs/plans/PLAN-NN-<slug>.md` | plan file exists |
+| executing | commits on `feat/NN-<slug>` | branch exists + plan present |
+| validated | same commits + row marked `validated` | local gate already verified |
+| merged | SHA on main, row updated | commit trailer has `closes #N` |
+| blocked | row: `blocked: <reason>` | human unblocks |
 
-An agent that crashes or times out mid-phase writes `blocked: <reason>` in its status row and exits. The driver (or the user) inspects, decides whether to restart fresh or abandon the branch.
+## Risks
 
-Worktrees from bailed agents that made no commits are auto-cleaned by the `Agent` tool. Worktrees with commits are kept; the branch is visible in `git branch -a` and can be picked up by `/merge`.
+- **Token cost.** 3 parallel × ~40–80k per issue ≈ 120–240k per wave. Typical milestone ≈ 2–3 waves. Hard orchestrator abort at a user-set milestone cap.
+- **Auto-merge over-reach.** Structured-conflict auto-resolve is only safe for additive conflicts. Everything else blocks. Acceptable; surfaces to human.
+- **Plan-vs-reality drift.** Without human plan review, a subtly wrong plan ships. The local gate catches build/test failures but not semantic bugs. The retrospective is how we learn — intentional tradeoff.
+- **Status board races.** Workers only edit their own row; orchestrator only edits merge columns. No two workers ever hold the same row.
+- **Worker infinite-loop risk on retries.** Capped at 3 per check; total worker wall-clock capped by the Agent tool's default timeout.
 
 ## Rollout
 
-Four steps, each shippable on its own:
+1. **Land this proposal** (current step).
+2. **Build `/drive-milestone` skill.** Worker prompt template, orchestrator loop, auto-merge handler. Skill lives in `.claude/skills/drive-milestone/` (gitignored — local only).
+3. **Dry-run on 2 M1 issues** — candidates: #2 (units) and #11 (buildings). Both data-only, both unblocked after #1, low merge-conflict surface. Verify status board, auto-merge, retro metrics.
+4. **Full M1 run if dry-run clean.** Drive all remaining M1 issues.
+5. **M1 retrospective.** Numbers + narrative. Adjust before M2.
 
-1. **Status board schema + hand-maintained.** Add `docs/plans/M1-STATUS.md` with all 23 rows, dep graph pre-filled. I update it manually for now. **Value:** durable progress view before any automation.
+## Out of scope
 
-2. **Auto modes for `/plan` and `/commit`.** Add `--auto` flags with the behavior above. **Value:** lets a single agent run end-to-end on an issue with no interactive prompts, which is a prerequisite for batching.
-
-3. **`/batch-plan`.** Parallelize only the planning phase first. This is the safer half — plans are text, not code. User still approves each one. **Value:** test worktree isolation + cross-agent status-board coordination on low-risk output.
-
-4. **`/batch-execute`.** Parallelize execution. Higher risk (conflicts, shared file edits across worktrees) — gate this on step 3 working well.
-
-## Risks & open questions
-
-- **Cost.** N parallel agents = roughly Nx tokens vs. serial. A typical issue's /review+/plan+/execute+/validate is maybe 40k–80k tokens. A batch of 5 M1 issues ≈ 200k–400k. Worth it for calendar-time savings but not free — worth a hard batch-size cap (start at 3).
-- **File conflicts across worktrees.** Different issues editing the same file (e.g. `src/types/index.ts`, `src/data/schemas/index.ts`) won't conflict at execute time but will at merge time. Mitigation: merge in dep order; if later branches touch earlier-merged files, rebase first. Already handled by `/merge`.
-- **Shared-node_modules write contention.** If an agent runs `pnpm install` mid-execute, it races. Mitigation: rule — agents must not install deps without user approval (already in `/execute`). Keep it.
-- **Status board races.** Two agents writing `M1-STATUS.md` at once. Mitigation: each agent edits only its own row via `Edit` tool with a unique `old_string`; parallel single-line edits on different rows are safe.
-- **Plan-approval bottleneck.** User reviewing 5 plans at once is still a batch of work. If plans are uniform (e.g. four "data-only" issues with tiny schemas), they review fast. If they're divergent, the gate is still the gate.
-- **Fresh-session resume.** A new Claude session starting the batch driver must pick up mid-M1 gracefully. The status board is the contract. Worth a small test: abandon mid-batch, restart, confirm driver recomputes `ready-to-execute` correctly from the board + branches on disk.
-
-## Decision points for the user
-
-Before I build this, worth settling:
-
-1. **Batch size cap.** Start at 3 parallel? 5? Set in the driver skill.
-2. **Plan approval UX.** Review all plans in-editor then tell me "approved", or do I emit an approval-checklist and you tick them off one by one?
-3. **Should `/batch-execute` gate on all plans being approved, or let me execute plan-N as soon as plan-N is approved (true pipelining)?** Pipelining is strictly better throughput but harder to reason about.
-4. **Board location.** `docs/plans/M1-STATUS.md` versus a `.claude/status.md` (out of repo tree). Pros of in-repo: survives git history, visible in PRs, durable. Cons: noise in diffs. My default: in-repo.
-5. **When does this proposal itself get implemented?** After M1-0001 (schemas) lands on main, which is literally the next `/merge`. Or earlier?
-
-## Next step if approved
-
-Land this doc on main (or as a branch), then open a GitHub issue `chore(workflow): implement parallel issue workflow` tracking the 4-step rollout. Step 1 (status board) is maybe 20 minutes of work; step 2 is a few hours; steps 3 and 4 are a half-day each.
+- CI-before-merge: we merge on local-gate green; CI is a backstop, not a gate.
+- Cross-milestone session continuity.
+- Automated acceptance-criteria checking beyond what `/validate` does today.
