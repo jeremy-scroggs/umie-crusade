@@ -353,3 +353,67 @@ Three ready for wave 5 — perfect batch.
 - **#21** (mobile touch input) needs #6 ✓ + #14 ✓ → READY
 
 Three ready: #15, #20, #21. Perfect batch cap 3 for wave 6. After wave 6, only #19, #22, #23 remain — and #19 unblocks once #15 lands. So wave 7 = #19, then wave 8 = #22, wave 9 = #23. M1 completion in 4 more waves at this pace.
+
+---
+
+# M1 Retro Metrics — Dry-run wave 6
+
+**Started:** 2026-04-26T21:05:14Z
+**Ended:** 2026-04-26T22:06:52Z
+**Main SHA at start:** 54013de
+**Main SHA at end:** d118b5d
+**Scope:** Wave 6 dry-run targeting #15 (walls damage states + repair), #20 (win/lose screens), #21 (mobile touch input). Polish + first input-system wave.
+
+## Per-issue
+
+### #15 feat(walls): damage states + manual repair
+- **Worker timing:** plan 17m 50s (anomalously high), impl 4m 37s, validate 9s. Wall-clock ≈ 24m 6s.
+- **Orchestrator merge:** ~3m. FAST-PATH.
+- **Plan vs actual files:** 9 modified. Match.
+- **Conflict:** none (fast-path).
+- **Decisions made:** Extended Breakable with `currentDamageState()` + `'destroyed'` event + `heal()`. One iteration: initial impl listened for `'damaged'` to emit destroyed, but `Damageable._dead` flips AFTER damaged fires; switched to `'died'` listener. `Map<string, Building>` replaced internal Set in BuildingSystem to support cell-based lookup for repair.
+- **Tests:** 214 → 235 (+21).
+
+### #20 feat(ui): win/lose screens
+- **Worker timing:** plan 19m 48s (anomalously high), impl 4m 2s, validate 12s. Wall-clock ≈ 24m 14s.
+- **Orchestrator merge:** ~2m. SLOW-PATH (rebased onto 9fcfe6d). Clean rebase — no overlap with #15.
+- **Plan vs actual files:** 13 created/modified. Slightly higher than ideal — runSignal extension + App.tsx edit are scope-adjacent.
+- **Conflict:** none.
+- **Decisions made:** Hedk'nah Pile dedup via React StrictMode wrapper test (first impl tried unrealistic unmount/remount dedup). gameStore `runStatus` slice + actions; pages render conditionally on it.
+- **Tests:** 235 → 261 (+26).
+
+### #21 feat(input): mobile touch controls
+- **Worker timing:** plan 2m 12s, impl 3m 20s, validate 22s. Wall-clock ≈ 5m 54s.
+- **Orchestrator merge:** ~2m. SLOW-PATH (rebased onto 3cec8ac). Clean rebase — git auto-merged systems/index.ts at different positions vs #15's edits.
+- **Plan vs actual files:** 8 created/modified.
+- **Conflict:** none.
+- **Decisions made:** Phaser-agnostic `InputSystem` accepting raw `PointerLike` events. Optional `CameraLike` adapter + optional `hitTest` callback. Gesture thresholds in `src/data/input/gestures.json` (validated by zod — added input registration to dataRegistry). Mouse fallback: left=tap, right=inspect, wheel=zoom.
+- **Tests:** 261 → 279 (+18).
+
+## Summary
+
+- **Wall-clock:** 1h 1m 38s (dispatch → final merge of #21). Slowest wave so far.
+- **Issues merged:** 3 / 3 (100%).
+- **Blocked:** 0.
+- **Auto-resolved conflicts:** 0 (structured resolver). Two git-native clean rebases.
+- **Biggest time burn:** #15 and #20 worker plan phases (~17–19m each — anomalous; usually 2m).
+- **Plan/actual drift:** #20 added +3 unplanned files (App.tsx, runSignal extension) — adjacent scope but worth a code-review note.
+
+## Notable observations
+
+1. **Two workers had long planning phases (17m, 19m).** Both for moderately complex issues with many integration points. Hypothesis: as the codebase grows, workers spend more time exploring before planning. Could improve by including more orchestrator-side "anchor points" hints in the prompt.
+2. **Zero structured-resolver invocations this wave.** Workers' touched files were disjoint enough for git's 3-way merge. "Add to different sections" + structural typing patterns compound positively.
+3. **#21 worker's data-driven gesture config is exemplary.** Thresholds in `gestures.json` rather than code constants — gold-standard data-driven discipline.
+4. **validate:data files: 12** (was 11) — #21 added gestures.json.
+
+## M1 progress at end of wave 6
+
+- **Merged: 20 / 23** (#1-10, #11-18, #20, #21)
+- **Paused: 3** (#19, #22, #23)
+
+## Newly unblocked after wave 6
+
+- **#19** (build panel) → READY (deps #4 ✓ + #14 ✓ + #15 ✓)
+- #22 still needs everything; #23 needs #22.
+
+Wave 7 = #19 only. Then #22, then #23. **M1 completion forecast: 3 more waves, ~30 min total.**
