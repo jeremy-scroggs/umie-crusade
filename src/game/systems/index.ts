@@ -43,3 +43,12 @@ export type {
   OrcStateName,
   WallLike,
 } from './AI';
+export { BuildingSystem } from './Building';
+export type {
+  BuildingSystemOptions,
+  BuildingStoreLike,
+  PlaceResult,
+  PlaceSuccess,
+  PlaceRejection,
+  PlaceFailure,
+} from './Building';
