@@ -417,3 +417,49 @@ Three ready: #15, #20, #21. Perfect batch cap 3 for wave 6. After wave 6, only #
 - #22 still needs everything; #23 needs #22.
 
 Wave 7 = #19 only. Then #22, then #23. **M1 completion forecast: 3 more waves, ~30 min total.**
+
+---
+
+# M1 Retro Metrics — Dry-run wave 7
+
+**Started:** 2026-04-26T22:10:30Z
+**Ended:** 2026-04-26T22:23:29Z
+**Main SHA at start:** 9b514e3
+**Main SHA at end:** ac495ea
+**Scope:** Wave 7 dry-run — solo issue #19 (build panel). Last UI piece before #22 integration smoke.
+
+## Per-issue
+
+### #19 feat(ui): build panel + selection state
+- **Worker timing:** plan 8m 3s (moderate — large existing UI codebase to reference), impl 2m 24s, validate 8s. Wall-clock ≈ 10m 35s.
+- **Orchestrator merge:** ~2m. FAST-PATH (solo wave — no contention).
+- **Plan vs actual files:** 6 created/modified. Match.
+- **Conflict:** none.
+- **Decisions made:** Thin `selectedTile` / `selectedWall` slice on gameStore (additive) — keeps UI orthogonal to input-system wiring (#21). BuildPanel takes prop callbacks for confirm-build / confirm-repair — keeps the organism jsdom-testable.
+- **Tests:** 279 → 296 (+17).
+
+## Summary
+
+- **Wall-clock:** 12m 59s (dispatch → final merge).
+- **Issues merged:** 1 / 1 (100%).
+- **Blocked:** 0.
+- **Auto-resolved conflicts:** 0 (solo wave, fast-path).
+- **Plan/actual drift:** none.
+
+## Notable observations
+
+1. **Solo waves are clean and fast.** No conflict surface, no rebase complications. ~13 min for an issue that built 2 React components + tests + store slice + string keys. This validates the orchestration pattern when ready-set has only one issue.
+2. **Worker followed established patterns precisely.** Atomic decomposition (atom Button reused → molecule BuildSlot → organism BuildPanel). gameStore additive slice. Prop callbacks for testability. Pattern-following has paid off as the codebase has grown.
+3. **#19 worker's plan phase 8m** — middle-ground (between wave 6's 17–19m anomaly and the typical 2m). Possibly the codebase is large enough now that plan phases settle around 5–10m for non-trivial UI work.
+
+## M1 progress at end of wave 7
+
+- **Merged: 21 / 23** (#1-#21)
+- **Paused: 2** (#22, #23)
+
+## Newly unblocked after wave 7
+
+- **#22** (integration smoke test) → READY (deps: all #1–#21 ✓)
+- #23 still waits on #22.
+
+Wave 8 = #22 (solo, integration test). Wave 9 = #23 (tile-size lock chore). M1 done after wave 9.
