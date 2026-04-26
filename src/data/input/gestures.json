@@ -1,0 +1,7 @@
+{
+  "tapMaxDurationMs": 250,
+  "longPressDurationMs": 500,
+  "dragThresholdPx": 10,
+  "pinchMinDelta": 0.01,
+  "wheelZoomStep": 0.0015
+}

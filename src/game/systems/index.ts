@@ -16,6 +16,11 @@ export type {
   WaveStartPayload,
   RunWonPayload,
   RunLostPayload,
+  SelectTilePayload,
+  SelectEntityPayload,
+  InspectShowPayload,
+  CameraPanPayload,
+  CameraZoomPayload,
 } from './events';
 export { DamageSystem } from './Damage';
 export type {
@@ -65,3 +70,12 @@ export type {
   FortCoreLike,
   SpawnEdgeCells,
 } from './Wave';
+export { InputSystem } from './Input';
+export type {
+  InputSystemOptions,
+  InputGesturesConfig,
+  PointerLike,
+  CameraLike,
+  HitResult,
+  HitTestFn,
+} from './Input';

@@ -51,6 +51,32 @@ export const GameEvents = {
    * destroyed. Payload: `RunLostPayload`.
    */
   RunLost: 'run:lost',
+  /**
+   * Emitted by the input system when a tap (or left-click) resolves on
+   * empty terrain. Payload: `SelectTilePayload`.
+   */
+  SelectTile: 'select:tile',
+  /**
+   * Emitted by the input system when a tap (or left-click) resolves on a
+   * known entity. Payload: `SelectEntityPayload`.
+   */
+  SelectEntity: 'select:entity',
+  /**
+   * Emitted by the input system on long-press (or right-click). The
+   * payload mirrors the `select:*` shape so the listener can decide
+   * whether to inspect a tile or an entity. Payload: `InspectShowPayload`.
+   */
+  InspectShow: 'inspect:show',
+  /**
+   * Emitted by the input system while a single-pointer drag on empty
+   * terrain is active. Payload: `CameraPanPayload`.
+   */
+  CameraPan: 'camera:pan',
+  /**
+   * Emitted by the input system on pinch (or wheel). `factor > 1` zooms
+   * in; `< 1` zooms out. Payload: `CameraZoomPayload`.
+   */
+  CameraZoom: 'camera:zoom',
 } as const;
 
 export type GameEventName = (typeof GameEvents)[keyof typeof GameEvents];
@@ -113,4 +139,52 @@ export interface RunWonPayload {
  */
 export interface RunLostPayload {
   reason: 'fort-destroyed';
+}
+
+/**
+ * Payload for `select:tile`. When the input system has a `hitTest`
+ * callback that resolved a tile, `kind === 'tile'` and `(x, y)` are
+ * tile coordinates. With no `hitTest`, the system falls back to raw
+ * screen-space pixels and `kind === 'screen'`. Listeners discriminate
+ * on `kind` rather than guessing the coordinate space.
+ */
+export type SelectTilePayload =
+  | { kind: 'tile'; x: number; y: number }
+  | { kind: 'screen'; x: number; y: number };
+
+/**
+ * Payload for `select:entity`. The `id` matches whatever the
+ * caller-supplied `hitTest` callback returned (entity id, building
+ * id, etc.) — the input system stays opaque to its meaning.
+ */
+export interface SelectEntityPayload {
+  id: string;
+}
+
+/**
+ * Payload for `inspect:show`. Same shape as the select payloads — the
+ * caller decides whether to inspect a tile or an entity based on the
+ * discriminator.
+ */
+export type InspectShowPayload =
+  | { kind: 'tile'; x: number; y: number }
+  | { kind: 'entity'; id: string }
+  | { kind: 'screen'; x: number; y: number };
+
+/**
+ * Payload for `camera:pan`. `dx`/`dy` are screen-space pixel deltas
+ * since the last move event in the same drag. Listeners apply them to
+ * camera scroll directly (negate if needed depending on convention).
+ */
+export interface CameraPanPayload {
+  dx: number;
+  dy: number;
+}
+
+/**
+ * Payload for `camera:zoom`. `factor` is multiplicative relative to
+ * the current zoom. `> 1` zooms in; `< 1` zooms out.
+ */
+export interface CameraZoomPayload {
+  factor: number;
 }

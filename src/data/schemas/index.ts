@@ -4,12 +4,14 @@ import { buildingDefSchema } from './building.schema';
 import { waveDefSchema } from './wave.schema';
 import { heroDefSchema } from './hero.schema';
 import { stringsDefSchema } from './strings.schema';
+import { inputGesturesSchema } from './input.schema';
 
 export * from './unit.schema';
 export * from './building.schema';
 export * from './wave.schema';
 export * from './hero.schema';
 export * from './strings.schema';
+export * from './input.schema';
 
 export const dataRegistry: Record<string, ZodTypeAny> = {
   orcs: unitDefSchema,
@@ -18,4 +20,5 @@ export const dataRegistry: Record<string, ZodTypeAny> = {
   waves: waveDefSchema,
   heroes: heroDefSchema,
   strings: stringsDefSchema,
+  input: inputGesturesSchema,
 };
