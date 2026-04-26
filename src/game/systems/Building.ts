@@ -1,5 +1,6 @@
 import type { EventEmitterLike } from '@/game/components';
 import type { WallDef } from '@/types';
+import { Building } from '@/game/entities/Building';
 import { GameEvents, type WallEventPayload } from './events';
 import type { Cell, Pathfinding } from './Pathfinding';
 
@@ -78,6 +79,33 @@ export interface PlaceRejection {
 
 export type PlaceResult = PlaceSuccess | PlaceRejection;
 
+/** Why a repair was rejected. */
+export type RepairFailure =
+  | 'not-a-wall'
+  | 'bad-amount'
+  | 'at-max-hp'
+  | 'insufficient-gold';
+
+export interface RepairSuccess {
+  ok: true;
+  cell: Cell;
+  /** Whole HP restored. May be < requested if capped at maxHp. */
+  hpRestored: number;
+  /** Gold actually debited — equals `hpRestored * def.repairCost.goldPerHp`. */
+  cost: number;
+}
+
+export interface RepairRejection {
+  ok: false;
+  reason: RepairFailure;
+  /** Only set for `insufficient-gold`. */
+  needed?: number;
+  /** Only set for `insufficient-gold`. */
+  have?: number;
+}
+
+export type RepairResult = RepairSuccess | RepairRejection;
+
 export class BuildingSystem {
   readonly def: WallDef;
   readonly emitter: EventEmitterLike;
@@ -85,8 +113,11 @@ export class BuildingSystem {
   private readonly store: BuildingStoreLike;
   private readonly fortCore?: Cell;
   private readonly spawns: readonly Cell[];
-  /** Cells we have placed walls on, keyed `${x},${y}`. */
-  private readonly walls = new Set<string>();
+  /**
+   * Walls we have placed, keyed `${x},${y}`. Each entry maps to the
+   * `Building` entity for that cell (used by `tryRepairWall`).
+   */
+  private readonly walls = new Map<string, Building>();
 
   constructor(opts: BuildingSystemOptions) {
     this.def = opts.def;
@@ -146,7 +177,17 @@ export class BuildingSystem {
       };
     }
 
-    this.walls.add(key);
+    // Build the per-cell entity. Each Building owns its own emitter so
+    // per-wall 'damaged'/'destroyed' events stay scoped to that wall;
+    // we forward the system-level `wall:destroyed` onto the shared bus
+    // (where Pathfinding listens) below.
+    const building = Building.fromDef(this.def, undefined, { x, y });
+    building.emitter.on(GameEvents.WallDestroyed, (...args: unknown[]) => {
+      this.walls.delete(key);
+      this.emitter.emit(GameEvents.WallDestroyed, ...args);
+    });
+    this.walls.set(key, building);
+
     const payload: WallEventPayload = { x, y };
     this.emitter.emit(GameEvents.WallBuilt, payload);
 
@@ -156,6 +197,76 @@ export class BuildingSystem {
   /** True if a wall has been placed by this system at `cell`. */
   hasWallAt(cell: Cell): boolean {
     return this.walls.has(`${cell.x},${cell.y}`);
+  }
+
+  /**
+   * Look up the `Building` placed at `cell`, or `undefined` if none.
+   * Exposed for callers (HUD, future tower-placement system, tests)
+   * that need to inspect HP / damage state.
+   */
+  buildingAt(cell: Cell): Building | undefined {
+    return this.walls.get(`${cell.x},${cell.y}`);
+  }
+
+  /**
+   * Manually repair a placed wall. Caller-driven only — there is NO
+   * auto-repair in M1. The Gukka auto-repair (M2) will be a separate
+   * caller of this same API.
+   *
+   * Order of checks:
+   *   1. not-a-wall    — no placed wall at this cell
+   *   2. bad-amount    — hpAmount must be a positive integer
+   *   3. at-max-hp     — wall is already pristine (no HP missing)
+   *   4. insufficient-gold — only check that mutates the store
+   *
+   * On success: debits `restorable * goldPerHp`, heals the Breakable
+   * by `restorable`, returns `{ ok, cell, hpRestored, cost }`.
+   * `restorable = min(hpAmount, maxHp - currentHp)`.
+   *
+   * Per-HP cost is read from `def.repairCost.goldPerHp` — zero
+   * hardcoded magic numbers.
+   */
+  tryRepairWall(cell: Cell, hpAmount: number): RepairResult {
+    const key = `${cell.x},${cell.y}`;
+    const building = this.walls.get(key);
+    if (!building) {
+      return { ok: false, reason: 'not-a-wall' };
+    }
+
+    if (
+      !Number.isInteger(hpAmount) ||
+      hpAmount <= 0
+    ) {
+      return { ok: false, reason: 'bad-amount' };
+    }
+
+    const breakable = building.breakable;
+    const missing = breakable.maxHp - breakable.hp;
+    if (missing <= 0) {
+      return { ok: false, reason: 'at-max-hp' };
+    }
+
+    const restorable = Math.min(hpAmount, missing);
+    const goldPerHp = this.def.repairCost.goldPerHp;
+    const cost = restorable * goldPerHp;
+    const have = this.store.gold;
+    if (!this.store.spendGold(cost)) {
+      return {
+        ok: false,
+        reason: 'insufficient-gold',
+        needed: cost,
+        have,
+      };
+    }
+
+    const restored = breakable.heal(restorable);
+
+    return {
+      ok: true,
+      cell: { x: cell.x, y: cell.y },
+      hpRestored: restored,
+      cost,
+    };
   }
 
   /**

@@ -5,7 +5,11 @@ export type { DamageableOptions, DamagedPayload } from './Damageable';
 export { Targetable, CATEGORY_TARGET_PRIORITY } from './Targetable';
 export type { TargetableOptions } from './Targetable';
 export { Breakable } from './Breakable';
-export type { BreakableOptions, DamageState } from './Breakable';
+export type {
+  BreakableOptions,
+  DamageState,
+  DamageStateName,
+} from './Breakable';
 export { Upgradeable } from './Upgradeable';
 export type { UpgradeableOptions, UpgradeOption } from './Upgradeable';
 export { Ability } from './Ability';

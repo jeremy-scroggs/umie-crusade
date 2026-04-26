@@ -5,6 +5,7 @@ import {
   SimpleEventEmitter,
 } from '@/game/components';
 import type { EventEmitterLike } from '@/game/components';
+import { GameEvents, type WallEventPayload } from '@/game/systems/events';
 
 /**
  * Building — wall or tower entity.
@@ -14,23 +15,47 @@ import type { EventEmitterLike } from '@/game/components';
  * `combat` block via a getter for future combat systems.
  *
  * All stats (hp, armor, combat, damage thresholds) come from the def.
+ *
+ * Grid cell binding (#15): when constructed with a `cell`, the entity
+ * subscribes to its Breakable's `'destroyed'` event and re-emits the
+ * system-level `wall:destroyed` event with `{x,y}` on its own emitter
+ * so the surrounding system (BuildingSystem / Pathfinding) can react.
+ * Walls instantiated without a cell (older tests, towers) skip the
+ * re-emit. Each Building owns its own emitter by default to keep
+ * per-wall `'damaged'` events from bleeding across instances.
  */
+/** Grid cell — duplicated locally to avoid a Pathfinding import here. */
+export interface BuildingCell {
+  x: number;
+  y: number;
+}
+
 export class Building {
   readonly def: BuildingDef;
   readonly emitter: EventEmitterLike;
   readonly breakable: Breakable;
   readonly upgradeable: Upgradeable;
+  readonly cell?: BuildingCell;
 
   private constructor(
     def: BuildingDef,
     emitter: EventEmitterLike,
     breakable: Breakable,
     upgradeable: Upgradeable,
+    cell?: BuildingCell,
   ) {
     this.def = def;
     this.emitter = emitter;
     this.breakable = breakable;
     this.upgradeable = upgradeable;
+    this.cell = cell;
+
+    if (cell) {
+      const payload: WallEventPayload = { x: cell.x, y: cell.y };
+      this.emitter.on('destroyed', () => {
+        this.emitter.emit(GameEvents.WallDestroyed, payload);
+      });
+    }
   }
 
   get category(): BuildingDef['category'] {
@@ -57,7 +82,11 @@ export class Building {
     return this.def.damageStates;
   }
 
-  static fromDef(def: BuildingDef, emitter?: EventEmitterLike): Building {
+  static fromDef(
+    def: BuildingDef,
+    emitter?: EventEmitterLike,
+    cell?: BuildingCell,
+  ): Building {
     const ee: EventEmitterLike = emitter ?? new SimpleEventEmitter();
     const damageStates = def.category === 'wall' ? def.damageStates : [];
     const breakable = new Breakable({
@@ -68,6 +97,6 @@ export class Building {
       fallbackSprite: def.sprite,
     });
     const upgradeable = new Upgradeable({ emitter: ee });
-    return new Building(def, ee, breakable, upgradeable);
+    return new Building(def, ee, breakable, upgradeable, cell);
   }
 }

@@ -54,6 +54,10 @@ export type {
   PlaceSuccess,
   PlaceRejection,
   PlaceFailure,
+  RepairResult,
+  RepairSuccess,
+  RepairRejection,
+  RepairFailure,
 } from './Building';
 export { WaveSystem } from './Wave';
 export type {

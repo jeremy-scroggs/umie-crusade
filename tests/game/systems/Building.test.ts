@@ -363,3 +363,147 @@ describe('BuildingSystem — hasWallAt', () => {
     expect(sys.hasWallAt({ x: 2, y: 0 })).toBe(false);
   });
 });
+
+describe('BuildingSystem — tryRepairWall', () => {
+  function placeOne(): {
+    sys: BuildingSystem;
+    pf: Pathfinding;
+    store: ReturnType<typeof makeStore>;
+    emitter: SimpleEventEmitter;
+    cell: { x: number; y: number };
+  } {
+    const map = corridor(5);
+    const emitter = new SimpleEventEmitter();
+    const pf = new Pathfinding(map, emitter);
+    const store = makeStore(def.buildCost.gold * 50);
+    const sys = new BuildingSystem({ def, pathfinding: pf, emitter, store });
+    const cell = { x: 1, y: 0 };
+    const r = sys.tryPlaceWall(cell);
+    if (!r.ok) throw new Error(`fixture: placement failed: ${r.reason}`);
+    return { sys, pf, store, emitter, cell };
+  }
+
+  it('repairs a damaged wall, debits per-HP gold, restores HP', () => {
+    const { sys, store, cell } = placeOne();
+    const building = sys.buildingAt(cell);
+    if (!building) throw new Error('expected building');
+
+    building.breakable.applyDamage(30);
+    expect(building.breakable.hp).toBe(def.hp - 30);
+
+    const goldBefore = store.gold;
+    const result = sys.tryRepairWall(cell, 10);
+
+    expect(result).toEqual({
+      ok: true,
+      cell,
+      hpRestored: 10,
+      cost: 10 * def.repairCost.goldPerHp,
+    });
+    expect(building.breakable.hp).toBe(def.hp - 20);
+    expect(store.gold).toBe(goldBefore - 10 * def.repairCost.goldPerHp);
+  });
+
+  it('caps hpRestored at the missing HP and only debits for what was applied', () => {
+    const { sys, store, cell } = placeOne();
+    const building = sys.buildingAt(cell)!;
+    building.breakable.applyDamage(5); // missing 5 HP
+    const goldBefore = store.gold;
+
+    const result = sys.tryRepairWall(cell, 100);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.hpRestored).toBe(5);
+    expect(result.cost).toBe(5 * def.repairCost.goldPerHp);
+    expect(building.breakable.hp).toBe(def.hp);
+    expect(store.gold).toBe(goldBefore - 5 * def.repairCost.goldPerHp);
+  });
+
+  it('rejects at-max-hp without spending gold', () => {
+    const { sys, store, cell } = placeOne();
+    const goldBefore = store.gold;
+
+    const result = sys.tryRepairWall(cell, 10);
+
+    expect(result).toEqual({ ok: false, reason: 'at-max-hp' });
+    expect(store.gold).toBe(goldBefore);
+  });
+
+  it('rejects insufficient-gold without applying any heal', () => {
+    const { sys, store, cell } = placeOne();
+    const building = sys.buildingAt(cell)!;
+    building.breakable.applyDamage(50);
+    const hpBefore = building.breakable.hp;
+    store.setGold(1);
+
+    const result = sys.tryRepairWall(cell, 50);
+
+    expect(result).toEqual({
+      ok: false,
+      reason: 'insufficient-gold',
+      needed: 50 * def.repairCost.goldPerHp,
+      have: 1,
+    });
+    expect(store.gold).toBe(1);
+    expect(building.breakable.hp).toBe(hpBefore);
+  });
+
+  it('rejects bad-amount for zero, negative, or non-integer requests', () => {
+    const { sys, cell } = placeOne();
+    const building = sys.buildingAt(cell)!;
+    building.breakable.applyDamage(20);
+
+    expect(sys.tryRepairWall(cell, 0)).toEqual({ ok: false, reason: 'bad-amount' });
+    expect(sys.tryRepairWall(cell, -5)).toEqual({ ok: false, reason: 'bad-amount' });
+    expect(sys.tryRepairWall(cell, 1.5)).toEqual({ ok: false, reason: 'bad-amount' });
+  });
+
+  it('rejects not-a-wall on cells with no placed wall', () => {
+    const { sys } = placeOne();
+    expect(sys.tryRepairWall({ x: 4, y: 0 }, 5)).toEqual({
+      ok: false,
+      reason: 'not-a-wall',
+    });
+  });
+
+  it('cleans up + emits wall:destroyed end-to-end (Pathfinding restored)', () => {
+    const { sys, pf, emitter, cell } = placeOne();
+    const onDestroyed = vi.fn();
+    emitter.on(GameEvents.WallDestroyed, onDestroyed);
+
+    const building = sys.buildingAt(cell)!;
+    expect(pf.isWalkable(cell.x, cell.y)).toBe(false);
+
+    building.breakable.applyDamage(def.hp + 50);
+
+    expect(onDestroyed).toHaveBeenCalledTimes(1);
+    expect(onDestroyed).toHaveBeenCalledWith(cell);
+    expect(pf.isWalkable(cell.x, cell.y)).toBe(true);
+    expect(sys.hasWallAt(cell)).toBe(false);
+    expect(sys.tryRepairWall(cell, 10)).toEqual({ ok: false, reason: 'not-a-wall' });
+  });
+
+  it('reads repair cost from def (data-driven, no hardcoded magic)', () => {
+    const customDef: WallDef = {
+      ...def,
+      id: 'wall-test',
+      repairCost: { goldPerHp: 7 },
+    };
+    const map = corridor(5);
+    const emitter = new SimpleEventEmitter();
+    const pf = new Pathfinding(map, emitter);
+    const store = makeStore(1000);
+    const sys = new BuildingSystem({ def: customDef, pathfinding: pf, emitter, store });
+    const cell = { x: 1, y: 0 };
+    expect(sys.tryPlaceWall(cell).ok).toBe(true);
+
+    sys.buildingAt(cell)!.breakable.applyDamage(20);
+
+    const result = sys.tryRepairWall(cell, 4);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.hpRestored).toBe(4);
+    expect(result.cost).toBe(28);
+  });
+});

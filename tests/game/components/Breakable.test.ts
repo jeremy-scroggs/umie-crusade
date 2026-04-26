@@ -70,3 +70,143 @@ describe('Breakable', () => {
     expect(b.hp).toBe(90);
   });
 });
+
+describe('Breakable.currentDamageState', () => {
+  it("reports 'pristine' at full HP", () => {
+    const b = new Breakable({
+      hp: 100,
+      armor: 0,
+      emitter: new SimpleEventEmitter(),
+      damageStates: wallStates,
+      fallbackSprite: 'fallback.png',
+    });
+    expect(b.currentDamageState()).toBe('pristine');
+  });
+
+  it("reports 'cracked' between the highest non-1.0 and lowest threshold", () => {
+    const b = new Breakable({
+      hp: 100,
+      armor: 0,
+      emitter: new SimpleEventEmitter(),
+      damageStates: wallStates,
+      fallbackSprite: 'fallback.png',
+    });
+    b.applyDamage(25); // hp 75 -> fraction 0.75 -> cracked
+    expect(b.currentDamageState()).toBe('cracked');
+  });
+
+  it("reports 'crumbling' below the lowest threshold", () => {
+    const b = new Breakable({
+      hp: 100,
+      armor: 0,
+      emitter: new SimpleEventEmitter(),
+      damageStates: wallStates,
+      fallbackSprite: 'fallback.png',
+    });
+    b.applyDamage(75); // hp 25 -> fraction 0.25 < 0.33 -> crumbling
+    expect(b.currentDamageState()).toBe('crumbling');
+  });
+
+  it("reports 'crumbling' at HP 0 and dead is true", () => {
+    const b = new Breakable({
+      hp: 100,
+      armor: 0,
+      emitter: new SimpleEventEmitter(),
+      damageStates: wallStates,
+      fallbackSprite: 'fallback.png',
+    });
+    b.applyDamage(150);
+    expect(b.dead).toBe(true);
+    expect(b.currentDamageState()).toBe('crumbling');
+  });
+});
+
+describe("Breakable 'destroyed' event", () => {
+  it('fires exactly once when HP reaches 0', () => {
+    const emitter = new SimpleEventEmitter();
+    const spy = vi.fn();
+    emitter.on('destroyed', spy);
+
+    const b = new Breakable({
+      hp: 50,
+      armor: 0,
+      emitter,
+      damageStates: wallStates,
+      fallbackSprite: 'fallback.png',
+    });
+
+    b.applyDamage(20);
+    expect(spy).not.toHaveBeenCalled();
+    b.applyDamage(40);
+    expect(spy).toHaveBeenCalledTimes(1);
+    // Extra hits don't re-fire — even if Damageable's applyDamage is a no-op when dead.
+    b.applyDamage(10);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fire 'destroyed' when HP stays positive", () => {
+    const emitter = new SimpleEventEmitter();
+    const spy = vi.fn();
+    emitter.on('destroyed', spy);
+
+    const b = new Breakable({
+      hp: 100,
+      armor: 0,
+      emitter,
+      damageStates: wallStates,
+      fallbackSprite: 'fallback.png',
+    });
+    b.applyDamage(99);
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('Breakable.heal', () => {
+  it('restores HP and climbs back through the visual bands', () => {
+    const emitter = new SimpleEventEmitter();
+    const b = new Breakable({
+      hp: 100,
+      armor: 0,
+      emitter,
+      damageStates: wallStates,
+      fallbackSprite: 'fallback.png',
+    });
+
+    b.applyDamage(80); // hp 20 -> crumbling
+    expect(b.currentDamageState()).toBe('crumbling');
+
+    const restored = b.heal(60); // hp 80 -> cracked (fraction 0.8 >= 0.66)
+    expect(restored).toBe(60);
+    expect(b.hp).toBe(80);
+    expect(b.currentDamageState()).toBe('cracked');
+  });
+
+  it('caps healing at maxHp', () => {
+    const b = new Breakable({
+      hp: 100,
+      armor: 0,
+      emitter: new SimpleEventEmitter(),
+      damageStates: wallStates,
+      fallbackSprite: 'fallback.png',
+    });
+    b.applyDamage(10); // hp 90
+    const restored = b.heal(500);
+    expect(restored).toBe(10);
+    expect(b.hp).toBe(100);
+    expect(b.currentDamageState()).toBe('pristine');
+  });
+
+  it('is a no-op when dead', () => {
+    const b = new Breakable({
+      hp: 30,
+      armor: 0,
+      emitter: new SimpleEventEmitter(),
+      damageStates: wallStates,
+      fallbackSprite: 'fallback.png',
+    });
+    b.applyDamage(50);
+    expect(b.dead).toBe(true);
+    expect(b.heal(20)).toBe(0);
+    expect(b.hp).toBe(0);
+  });
+});
