@@ -13,6 +13,9 @@ export type {
   WallEventPayload,
   PathEventPayload,
   WaveCompletePayload,
+  WaveStartPayload,
+  RunWonPayload,
+  RunLostPayload,
 } from './events';
 export { DamageSystem } from './Damage';
 export type {
@@ -52,3 +55,9 @@ export type {
   PlaceRejection,
   PlaceFailure,
 } from './Building';
+export { WaveSystem } from './Wave';
+export type {
+  WaveSystemOptions,
+  FortCoreLike,
+  SpawnEdgeCells,
+} from './Wave';

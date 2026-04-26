@@ -35,6 +35,22 @@ export const GameEvents = {
    * Payload: `WaveCompletePayload`.
    */
   WaveComplete: 'wave:complete',
+  /**
+   * Emitted by the wave-spawning system at the start of each wave (when
+   * the run begins, and on every transition into the next wave). Payload:
+   * `WaveStartPayload`.
+   */
+  WaveStart: 'wave:start',
+  /**
+   * Emitted by the wave-spawning system when the player has completed all
+   * configured waves. Payload: `RunWonPayload`.
+   */
+  RunWon: 'run:won',
+  /**
+   * Emitted by the wave-spawning system when the fort-core entity has been
+   * destroyed. Payload: `RunLostPayload`.
+   */
+  RunLost: 'run:lost',
 } as const;
 
 export type GameEventName = (typeof GameEvents)[keyof typeof GameEvents];
@@ -66,4 +82,35 @@ export interface WaveCompletePayload {
   reward: {
     gold: number;
   };
+}
+
+/**
+ * Payload for `wave:start`. Fired when a wave begins (run start + every
+ * transition to the next wave). `cry` is the optional flavor key from the
+ * wave def (`waves/*.json`'s `cry` field), passed through verbatim so a
+ * dialogue/audio layer can resolve it.
+ */
+export interface WaveStartPayload {
+  waveId: string;
+  waveNumber: number;
+  cry?: string;
+}
+
+/**
+ * Payload for `run:won`. Fired exactly once after the final wave's
+ * `wave:complete`. `lastWaveNumber` mirrors the final wave's `number`
+ * (e.g. 5 for the M1 set).
+ */
+export interface RunWonPayload {
+  lastWaveNumber: number;
+}
+
+/**
+ * Payload for `run:lost`. Fired exactly once when the fort-core
+ * `damageable` reaches HP 0. The `reason` discriminator leaves room for
+ * future loss conditions (timeout, all orcs dead, etc.) without breaking
+ * existing listeners.
+ */
+export interface RunLostPayload {
+  reason: 'fort-destroyed';
 }
