@@ -27,6 +27,29 @@ const INITIAL_HERO_ABILITY: HeroAbilityState = {
  */
 export type RunStatus = 'running' | 'won' | 'lost';
 
+/**
+ * Grid cell — duplicated locally (rather than imported from
+ * Pathfinding) to keep `gameStore` framework-agnostic. The shape
+ * matches `Pathfinding.Cell` exactly; callers (input integration in
+ * #21) cast freely.
+ */
+export interface SelectedCell {
+  x: number;
+  y: number;
+}
+
+/**
+ * BuildPanel-facing selection state for a damaged wall (#19/#15). The
+ * input integration (#21) writes both `cell` and the current HP / max
+ * HP so the UI can decide whether the manual repair action is enabled
+ * without re-importing the entity layer.
+ */
+export interface SelectedWall {
+  cell: SelectedCell;
+  hp: number;
+  maxHp: number;
+}
+
 export interface GameState {
   gold: number;
   wave: number;
@@ -53,6 +76,17 @@ export interface GameState {
    * single store reset is enough to start a fresh run.
    */
   runStatus: RunStatus;
+  /**
+   * BuildPanel selection (#19). When `selectedTile` is non-null and
+   * `selectedWall` is null, the panel shows wall + ballista build
+   * options. When `selectedWall` is non-null, the panel shows the
+   * manual repair action regardless of `selectedTile` (more specific
+   * UX wins). Both null = panel hidden. The actual selection logic
+   * (which entity / cell the player tapped) is wired by the input
+   * integration in #21; this slice is the React-facing surface.
+   */
+  selectedTile: SelectedCell | null;
+  selectedWall: SelectedWall | null;
   addGold: (amount: number) => void;
   spendGold: (amount: number) => boolean;
   setWave: (wave: number) => void;
@@ -69,6 +103,9 @@ export interface GameState {
   setRunStatus: (status: RunStatus) => void;
   winRun: () => void;
   loseRun: () => void;
+  setSelectedTile: (cell: SelectedCell | null) => void;
+  setSelectedWall: (wall: SelectedWall | null) => void;
+  clearSelection: () => void;
   reset: () => void;
 }
 
@@ -82,6 +119,8 @@ const INITIAL_STATE = {
   skulls: 0,
   waveStartAtMs: null as number | null,
   runStatus: 'running' as RunStatus,
+  selectedTile: null as SelectedCell | null,
+  selectedWall: null as SelectedWall | null,
 };
 
 export const useGameStore = create<GameState>()((set, get) => ({
@@ -133,6 +172,12 @@ export const useGameStore = create<GameState>()((set, get) => ({
   winRun: () => set({ runStatus: 'won' }),
 
   loseRun: () => set({ runStatus: 'lost' }),
+
+  setSelectedTile: (cell) => set({ selectedTile: cell }),
+
+  setSelectedWall: (wall) => set({ selectedWall: wall }),
+
+  clearSelection: () => set({ selectedTile: null, selectedWall: null }),
 
   reset: () => set(INITIAL_STATE),
 }));
