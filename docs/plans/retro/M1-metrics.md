@@ -287,3 +287,69 @@
 - **#17** (HUD) needs #4 ✓ + #13 ✓ + #16 ✓ → READY
 
 Three ready for wave 5 — perfect batch.
+
+---
+
+# M1 Retro Metrics — Dry-run wave 5
+
+**Started:** 2026-04-26T20:41:28Z
+**Ended:** 2026-04-26T20:52:01Z
+**Main SHA at start:** d1a6bf7
+**Main SHA at end:** e2fb479
+**Scope:** Wave 5 dry-run targeting #10 (wave spawner), #14 (building placement), #17 (HUD). Cross-system integration wave: spawner wires waves+AI+events, building wires walls+pathfinding+economy, HUD wires React to Zustand for live values.
+
+## Per-issue
+
+### #14 feat(building): grid wall placement
+- **Worker timing:** plan 2m 4s, impl 1m 51s, validate 15s. Wall-clock ≈ 4m 10s.
+- **Orchestrator merge:** ~3m. FAST-PATH (first to finish, base = main).
+- **Plan vs actual files:** 4 created. Match.
+- **Conflict:** none (fast-path).
+- **Decisions made:** Synchronous BFS over `pathfinding.isWalkable` for path-critical "would-trap-fort" check (deterministic, revert-safe — avoided async findPath). Discriminated `PlaceResult` union (no throws).
+- **Tests:** 158 → 170 (+12).
+
+### #10 feat(waves): wave spawner + fort-core
+- **Worker timing:** plan 1m 3s, impl 2m 35s, validate 13s. Wall-clock ≈ 5m 9s (includes `pnpm install --frozen-lockfile` step).
+- **Orchestrator merge:** ~2m. SLOW-PATH (rebased onto 8a4d550). **Auto-resolved additive conflict** on `src/game/systems/index.ts` — main had #14's BuildingSystem exports, incoming had #10's WaveSystem exports. Concatenation worked cleanly.
+- **Plan vs actual files:** 5 created. Match.
+- **Conflict:** auto-resolved additive (systems/index.ts). `events.ts` also modified by #10 (added wave/run event types) but git auto-merged native (no conflict).
+- **Decisions made:** Ctor-injection pattern matching #9/#13. `FortCoreLike` structural interface — decoupled from a concrete fort-core entity (deferred). `humansProvider` defaults to internal tracking but scenes can override.
+- **Tests:** 170 → 182 (+12).
+
+### #17 feat(ui): HUD organism + atoms + molecules
+- **Worker timing:** plan 2m 2s, impl 2m 54s, validate 16s. Wall-clock ≈ 5m 12s.
+- **Orchestrator merge:** ~2m. SLOW-PATH (rebased onto 6c31906). Clean rebase — no conflicts.
+- **Plan vs actual files:** 16 created/modified. Atomic decomposition: 2 atoms (WaveBadge, SkullCounter), 2 molecules (HeroStatus, AbilityButton), 1 organism (HUD), gameStore HUD slice, 3 new string keys, 5 test files.
+- **Conflict:** none on rebase.
+- **Decisions made:** Added `triggerWaveStart`/`clearWaveStart` actions on store (rather than depending on #10's `wave:start` emitter directly) — single source of truth for ISE HAI banner that #10 can wire later.
+- **Tests:** 182 → 214 (+32).
+
+## Summary
+
+- **Wall-clock:** 10m 33s (dispatch → final merge of #17). FASTEST WAVE YET despite biggest test count growth.
+- **Issues merged:** 3 / 3 (100%).
+- **Blocked:** 0.
+- **Auto-resolved conflicts:** 1 (systems/index.ts — third production trigger of structured resolver).
+- **Biggest time burn:** worker #17 (impl 2m 54s + 32 new tests). Justified — full atomic-design HUD + 16 files.
+- **Plan/actual drift:** none — #17's 16 files all under issue scope.
+
+## Notable observations
+
+1. **Cross-system integration worked clean.** Three workers touching mostly different surfaces (game systems vs UI vs UI state) — no semantic conflicts. The "add-only to different sections" discipline plus structural-typing-over-concrete-deps pattern (per workers' `*Like` interfaces) is paying dividends.
+2. **HUD's `triggerWaveStart` decision is good design.** Rather than coupling #17 to #10's emitter, the worker added a store action — both #10 and the eventual scene-runner can call it. Clean inversion.
+3. **systems/index.ts is the predictable conflict point.** Third wave in a row with an additive conflict there. Auto-resolver is reliable but it's noise. Worth considering: split the barrel into per-system files (`./pathfinding.ts`, `./damage.ts`, etc.) so each new system adds its own file rather than appending to a shared one. Defer to milestone retro.
+4. **Board state drift bug surfaced:** noticed during wave 5 termination that #16's row (from wave 4) was still marked `planning` despite being merged. Cause: stash-pop ordering during wave 4's #9 merge meant the #16 → merged update got committed at an in-progress state. Fixed retroactively in this wave 5 artifacts commit. Skill v4 candidate: explicit checkpoint that all in-flight rows are `merged` BEFORE the artifacts commit.
+
+## M1 progress at end of wave 5
+
+- **Merged: 17 / 23** (#1-10, #11-14, #16-18)
+- **Paused: 6** (#15, #19, #20, #21, #22, #23)
+
+## Newly unblocked after wave 5
+
+- **#15** (walls damage states + repair) needs #8 ✓ + #13 ✓ + #14 ✓ → READY
+- **#19** (build panel) needs #4 ✓ + #14 ✓ + #15 ← blocked on #15
+- **#20** (win/lose screens) needs #4 ✓ + #10 ✓ → READY
+- **#21** (mobile touch input) needs #6 ✓ + #14 ✓ → READY
+
+Three ready: #15, #20, #21. Perfect batch cap 3 for wave 6. After wave 6, only #19, #22, #23 remain — and #19 unblocks once #15 lands. So wave 7 = #19, then wave 8 = #22, wave 9 = #23. M1 completion in 4 more waves at this pace.
