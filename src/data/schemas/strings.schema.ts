@@ -38,6 +38,15 @@ export const stringsDefSchema = z.object({
   'battle.defeatCreed': z.string().min(1),
   'battle.killConfirm': z.string().min(1),
   'battle.bossWave': z.string().min(1),
+
+  'runEnd.statsWave': z.string().min(1),
+  'runEnd.statsSkulls': z.string().min(1),
+  'runEnd.statsGold': z.string().min(1),
+  'runEnd.replay': z.string().min(1),
+  'runEnd.mainMenu': z.string().min(1),
+
+  'winScreen.title': z.string().min(1),
+  'loseScreen.title': z.string().min(1),
 });
 
 export type StringsDef = z.infer<typeof stringsDefSchema>;

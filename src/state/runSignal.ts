@@ -11,6 +11,14 @@ import { SimpleEventEmitter } from '@/game/components/EventEmitter';
  */
 export const RUN_EVENTS = {
   BEGIN: 'run:begin',
+  /**
+   * "Back to the main menu" navigation signal (#20). Emitted by the
+   * win/lose pages when the player taps Main Menu. The Phaser-side
+   * subscription (actual scene swap to a main-menu scene) is wired
+   * separately — defining the contract here keeps the React layer
+   * decoupled from scene specifics.
+   */
+  MAIN_MENU: 'run:mainMenu',
 } as const;
 
 export interface BeginRunPayload {

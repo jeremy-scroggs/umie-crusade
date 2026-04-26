@@ -164,6 +164,37 @@ describe('gameStore', () => {
     });
   });
 
+  describe('runStatus slice', () => {
+    it('starts as running', () => {
+      expect(useGameStore.getState().runStatus).toBe('running');
+    });
+
+    it('winRun() flips to won', () => {
+      useGameStore.getState().winRun();
+      expect(useGameStore.getState().runStatus).toBe('won');
+    });
+
+    it('loseRun() flips to lost', () => {
+      useGameStore.getState().loseRun();
+      expect(useGameStore.getState().runStatus).toBe('lost');
+    });
+
+    it('setRunStatus(s) sets to a given value', () => {
+      useGameStore.getState().setRunStatus('won');
+      expect(useGameStore.getState().runStatus).toBe('won');
+      useGameStore.getState().setRunStatus('lost');
+      expect(useGameStore.getState().runStatus).toBe('lost');
+      useGameStore.getState().setRunStatus('running');
+      expect(useGameStore.getState().runStatus).toBe('running');
+    });
+
+    it('reset() returns runStatus to running', () => {
+      useGameStore.getState().winRun();
+      useGameStore.getState().reset();
+      expect(useGameStore.getState().runStatus).toBe('running');
+    });
+  });
+
   describe('heroAbility slice', () => {
     it('starts empty (cooldownMs 0, readyAtMs null)', () => {
       const { heroAbility } = useGameStore.getState();

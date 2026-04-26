@@ -26,5 +26,12 @@
   "battle.defeat": "The fort has fallen...",
   "battle.defeatCreed": "Bloodrock nub kneel. Bludchok rise again.",
   "battle.killConfirm": "Hedk'nah gug.",
-  "battle.bossWave": "KWAT DA TRA!"
+  "battle.bossWave": "KWAT DA TRA!",
+  "runEnd.statsWave": "Wave reached",
+  "runEnd.statsSkulls": "Skulls taken",
+  "runEnd.statsGold": "Gold earned",
+  "runEnd.replay": "Klerg agen!",
+  "runEnd.mainMenu": "Back to Bludchok",
+  "winScreen.title": "Bludchok-hai gug!",
+  "loseScreen.title": "Nub goth. Nub pulga. Hedk'nah."
 }

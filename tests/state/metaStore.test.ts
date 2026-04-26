@@ -19,6 +19,7 @@ describe('metaStore', () => {
   beforeEach(() => {
     localStorage.clear();
     useMetaStore.getState().reset();
+    useMetaStore.getState().resetHedknahPile();
   });
 
   it('starts with empty roster and no active hero', () => {
@@ -95,5 +96,52 @@ describe('metaStore', () => {
     const state = useMetaStore.getState();
     expect(state.roster.map((h) => h.id)).toContain('persist-me');
     expect(state.activeHeroId).toBe('persist-me');
+  });
+
+  describe('Hedk\'nah Pile slice', () => {
+    it('starts at 0', () => {
+      expect(useMetaStore.getState().hedknahPile).toBe(0);
+    });
+
+    it('addToHedknahPile(n) accumulates', () => {
+      useMetaStore.getState().addToHedknahPile(3);
+      useMetaStore.getState().addToHedknahPile(5);
+      expect(useMetaStore.getState().hedknahPile).toBe(8);
+    });
+
+    it('addToHedknahPile ignores zero and negative values', () => {
+      useMetaStore.getState().addToHedknahPile(0);
+      useMetaStore.getState().addToHedknahPile(-7);
+      expect(useMetaStore.getState().hedknahPile).toBe(0);
+    });
+
+    it('persists hedknahPile to localStorage under the same key', () => {
+      useMetaStore.getState().addToHedknahPile(11);
+
+      const raw = localStorage.getItem(STORAGE_KEY);
+      expect(raw).not.toBeNull();
+      const parsed = JSON.parse(raw as string) as {
+        state: { hedknahPile: number };
+      };
+      expect(parsed.state.hedknahPile).toBe(11);
+    });
+
+    it('reset() does NOT clear hedknahPile (meta-progression survives)', () => {
+      useMetaStore.getState().addToHedknahPile(4);
+      useMetaStore.getState().reset();
+      expect(useMetaStore.getState().hedknahPile).toBe(4);
+    });
+
+    it('resetHedknahPile() clears the pile', () => {
+      useMetaStore.getState().addToHedknahPile(4);
+      useMetaStore.getState().resetHedknahPile();
+      expect(useMetaStore.getState().hedknahPile).toBe(0);
+    });
+
+    it('rehydrates hedknahPile from localStorage', async () => {
+      useMetaStore.getState().addToHedknahPile(9);
+      await useMetaStore.persist.rehydrate();
+      expect(useMetaStore.getState().hedknahPile).toBe(9);
+    });
   });
 });

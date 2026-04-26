@@ -19,6 +19,14 @@ const INITIAL_HERO_ABILITY: HeroAbilityState = {
   readyAtMs: null,
 };
 
+/**
+ * Lifecycle of the current run. The wave system (#10) is expected to
+ * call `winRun()` on `run:won` (wave 5 cleared) and `loseRun()` on
+ * `run:lost` (fort destroyed). The React overlay routes to the
+ * appropriate page based on this value (#20).
+ */
+export type RunStatus = 'running' | 'won' | 'lost';
+
 export interface GameState {
   gold: number;
   wave: number;
@@ -39,6 +47,12 @@ export interface GameState {
    * value via a timeout so the banner is transient. See #17 / #10.
    */
   waveStartAtMs: number | null;
+  /**
+   * Lifecycle state of the current run (#20). Drives win/lose page
+   * routing in `App.tsx`. `reset()` returns this to `'running'` so a
+   * single store reset is enough to start a fresh run.
+   */
+  runStatus: RunStatus;
   addGold: (amount: number) => void;
   spendGold: (amount: number) => boolean;
   setWave: (wave: number) => void;
@@ -52,6 +66,9 @@ export interface GameState {
   setSkulls: (count: number) => void;
   triggerWaveStart: (nowMs: number) => void;
   clearWaveStart: () => void;
+  setRunStatus: (status: RunStatus) => void;
+  winRun: () => void;
+  loseRun: () => void;
   reset: () => void;
 }
 
@@ -64,6 +81,7 @@ const INITIAL_STATE = {
   heroMaxHp: 0,
   skulls: 0,
   waveStartAtMs: null as number | null,
+  runStatus: 'running' as RunStatus,
 };
 
 export const useGameStore = create<GameState>()((set, get) => ({
@@ -109,6 +127,12 @@ export const useGameStore = create<GameState>()((set, get) => ({
   triggerWaveStart: (nowMs) => set({ waveStartAtMs: nowMs }),
 
   clearWaveStart: () => set({ waveStartAtMs: null }),
+
+  setRunStatus: (status) => set({ runStatus: status }),
+
+  winRun: () => set({ runStatus: 'won' }),
+
+  loseRun: () => set({ runStatus: 'lost' }),
 
   reset: () => set(INITIAL_STATE),
 }));
