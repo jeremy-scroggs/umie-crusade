@@ -11,7 +11,10 @@ export const stringsDefSchema = z.object({
   'hud.wave': z.string().min(1),
   'hud.lives': z.string().min(1),
   'hud.skulls': z.string().min(1),
+  'hud.skullsAria': z.string().min(1),
   'hud.heroHp': z.string().min(1),
+  'hud.ability': z.string().min(1),
+  'hud.abilityReady': z.string().min(1),
 
   'menu.start': z.string().min(1),
   'menu.settings': z.string().min(1),

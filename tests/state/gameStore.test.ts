@@ -71,6 +71,99 @@ describe('gameStore', () => {
     expect(state.lives).toBe(10);
   });
 
+  describe('hero hp slice', () => {
+    it('starts with heroHp 0 and heroMaxHp 0', () => {
+      const { heroHp, heroMaxHp } = useGameStore.getState();
+      expect(heroHp).toBe(0);
+      expect(heroMaxHp).toBe(0);
+    });
+
+    it('setHero records both hp and maxHp', () => {
+      useGameStore.getState().setHero(40, 80);
+      const { heroHp, heroMaxHp } = useGameStore.getState();
+      expect(heroHp).toBe(40);
+      expect(heroMaxHp).toBe(80);
+    });
+
+    it('setHero clamps hp to [0, maxHp]', () => {
+      useGameStore.getState().setHero(500, 100);
+      expect(useGameStore.getState().heroHp).toBe(100);
+      useGameStore.getState().setHero(-30, 100);
+      expect(useGameStore.getState().heroHp).toBe(0);
+    });
+
+    it('damageHero floors at 0', () => {
+      useGameStore.getState().setHero(50, 100);
+      useGameStore.getState().damageHero(80);
+      expect(useGameStore.getState().heroHp).toBe(0);
+    });
+
+    it('healHero caps at maxHp', () => {
+      useGameStore.getState().setHero(80, 100);
+      useGameStore.getState().healHero(50);
+      expect(useGameStore.getState().heroHp).toBe(100);
+    });
+
+    it('damageHero / healHero ignore non-positive amounts', () => {
+      useGameStore.getState().setHero(50, 100);
+      useGameStore.getState().damageHero(0);
+      useGameStore.getState().damageHero(-10);
+      useGameStore.getState().healHero(0);
+      useGameStore.getState().healHero(-10);
+      expect(useGameStore.getState().heroHp).toBe(50);
+    });
+  });
+
+  describe('skulls slice', () => {
+    it('starts at 0', () => {
+      expect(useGameStore.getState().skulls).toBe(0);
+    });
+
+    it('addSkull increments by one', () => {
+      useGameStore.getState().addSkull();
+      useGameStore.getState().addSkull();
+      expect(useGameStore.getState().skulls).toBe(2);
+    });
+
+    it('setSkulls overrides and floors negatives at 0', () => {
+      useGameStore.getState().setSkulls(13);
+      expect(useGameStore.getState().skulls).toBe(13);
+      useGameStore.getState().setSkulls(-5);
+      expect(useGameStore.getState().skulls).toBe(0);
+    });
+  });
+
+  describe('wave-start banner slice', () => {
+    it('starts null', () => {
+      expect(useGameStore.getState().waveStartAtMs).toBe(null);
+    });
+
+    it('triggerWaveStart records the timestamp', () => {
+      useGameStore.getState().triggerWaveStart(12345);
+      expect(useGameStore.getState().waveStartAtMs).toBe(12345);
+    });
+
+    it('clearWaveStart resets to null', () => {
+      useGameStore.getState().triggerWaveStart(12345);
+      useGameStore.getState().clearWaveStart();
+      expect(useGameStore.getState().waveStartAtMs).toBe(null);
+    });
+  });
+
+  describe('reset clears HUD slices', () => {
+    it('reset zeroes hero hp, skulls, and wave-start banner', () => {
+      useGameStore.getState().setHero(50, 100);
+      useGameStore.getState().setSkulls(7);
+      useGameStore.getState().triggerWaveStart(999);
+      useGameStore.getState().reset();
+      const s = useGameStore.getState();
+      expect(s.heroHp).toBe(0);
+      expect(s.heroMaxHp).toBe(0);
+      expect(s.skulls).toBe(0);
+      expect(s.waveStartAtMs).toBe(null);
+    });
+  });
+
   describe('heroAbility slice', () => {
     it('starts empty (cooldownMs 0, readyAtMs null)', () => {
       const { heroAbility } = useGameStore.getState();
