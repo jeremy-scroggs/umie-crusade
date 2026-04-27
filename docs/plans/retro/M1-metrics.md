@@ -463,3 +463,62 @@ Wave 7 = #19 only. Then #22, then #23. **M1 completion forecast: 3 more waves, ~
 - #23 still waits on #22.
 
 Wave 8 = #22 (solo, integration test). Wave 9 = #23 (tile-size lock chore). M1 done after wave 9.
+
+---
+
+# M1 Retro Metrics — Dry-run wave 8
+
+**Started:** 2026-04-27T02:22:43Z
+**Ended:** 2026-04-27T02:34:52Z
+**Main SHA at start:** 76fb1b1
+**Main SHA at end:** df41145
+**Scope:** Wave 8 dry-run — solo issue #22 (integration smoke test). M1 GO/NO-GO gate.
+
+## Per-issue
+
+### #22 test(m1): integration smoke + grep guard
+- **Worker timing:** plan 2m 4s, impl 6m 12s, validate 0s. Wall-clock ≈ 8m 16s.
+- **Orchestrator merge:** ~3m. FAST-PATH (solo wave).
+- **Plan vs actual files:** 4 created. Match.
+- **Conflict:** none.
+- **Decisions made:** Single shared `SimpleEventEmitter` bus pattern; tick-based loop; jsdom-safe (no Phaser imports). Grep guard whitelist tuned for `AI.ts` default aggro radius + `Input.ts` DOM pointer button code (both legitimate non-balance literals).
+- **Tests:** 296 → 306 (+10).
+
+## Smoke test outcome
+
+**Conditional GO.** All four gates green; the 5-wave simulated run completes in well under the 5-minute sim cap on the very first wired pass. Grep guard caught zero balance violations across 8 system files.
+
+### Soft blocker follow-ups (documented in `docs/plans/PLAN-m1-smoke.md`)
+1. **WaveSystem default-emitter quirk:** `WaveSystem`'s `emitter` defaults to a fresh local emitter rather than requiring the caller's bus, which silently drops lifecycle events on first run until callers explicitly pass `emitter: bus`. Trap for future integrators. Suggested fix: make emitter required, OR document the default's gotcha prominently.
+2. **AI WallLike adapter for optional Building.cell:** AI's `WallLike` shape requires a 4-line adapter on top of `Building` because `Building.cell` is optional. Suggested fix: tighten `Building.cell` (require non-optional) OR have AI accept the optional-cell variant directly.
+
+Neither blocks M1. Both are appropriate to file as M2 follow-ups.
+
+### Manual playtest deferral
+Per orchestrator scope notes, browser-based playtest at desktop + mobile @ 375px + FPS verify with 100+ entities is **deferred to human review**. The worker explicitly cannot run a browser. Documented in findings doc.
+
+## Summary
+
+- **Wall-clock:** 12m 9s (dispatch → final merge).
+- **Issues merged:** 1 / 1.
+- **Blocked:** 0.
+- **Auto-resolved conflicts:** 0 (solo, fast-path).
+- **Plan/actual drift:** none.
+
+## Notable observations
+
+1. **Integration came together cleanly on first wiring.** This is the strongest signal yet that the workers' "structural typing + structural-resolver discipline + add-only barrels" pattern compounds positively. Eight independent system implementations, no rework needed at integration.
+2. **Smoke test runtime is under sim cap.** Indicates the data-driven balance is reasonable — wave 5 is beatable per the issue spec.
+3. **Two soft blockers found, none hard.** Surfacing these is exactly what the smoke test is for. Filing as M2 follow-ups is the right call.
+4. **Worker strictly followed scope-discipline rules.** Did NOT call `gh issue create` (per orchestrator note); documented blockers in plan doc instead.
+
+## M1 progress at end of wave 8
+
+- **Merged: 22 / 23** (#1-#22)
+- **Paused: 1** (#23)
+
+## Newly unblocked after wave 8
+
+- **#23** (tile-size lock chore) → READY (deps: #22 ✓)
+
+Wave 9 = #23 only — final M1 issue.
