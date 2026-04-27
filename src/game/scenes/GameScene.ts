@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { getGameStore } from '@/state/bridge';
+import { getGameStore, subscribeGameStore } from '@/state/bridge';
 import { SimpleEventEmitter } from '@/game/components';
 import {
   GameEvents,
@@ -44,6 +44,7 @@ export class GameScene extends Phaser.Scene {
   private offSelectTile: (() => void) | null = null;
   private offWaveStart: (() => void) | null = null;
   private offWaveComplete: (() => void) | null = null;
+  private offTimeScale: (() => void) | null = null;
 
   constructor() {
     super({ key: 'Game' });
@@ -222,25 +223,48 @@ export class GameScene extends Phaser.Scene {
       },
     );
 
-    // 6. Lifecycle hooks — fire systems destroy on scene shutdown so a
+    // 6. timeScale (#54) — mirror the gameStore slice into Phaser's
+    // built-in timer scale so any future `this.time.delayedCall` etc.
+    // honors pause/2x/4x without per-call wiring. The custom system
+    // loops scale `dt` directly in `update` below — this subscribe
+    // exists only so Phaser-internal timers stay in sync. Physics is
+    // not enabled in this project; if it ever is, mirror into
+    // `this.physics.world.timeScale` here as well.
+    this.time.timeScale = store.timeScale;
+    this.offTimeScale = subscribeGameStore((state, prev) => {
+      if (state.timeScale === prev.timeScale) return;
+      this.time.timeScale = state.timeScale;
+    });
+
+    // 7. Lifecycle hooks — fire systems destroy on scene shutdown so a
     // stop()-then-start() cycle (replay reuses this code path) leaves
     // no dangling listeners.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardown());
 
-    // 7. Begin the run.
+    // 8. Begin the run.
     this.systems.wave.start();
   }
 
   update(_time: number, delta: number): void {
     if (!this.systems) return;
-    const dt = delta / 1000;
-    this.systems.ai.update(dt);
-    this.systems.damage.update(dt);
-    this.systems.wave.update(dt);
-    this.systems.economy.update(dt);
+    // SINGLE multiply site for `timeScale` (#54). Every system below
+    // receives the already-scaled `dt`, so each one stays
+    // store-agnostic and unit-testable in jsdom. `timeScale === 0`
+    // ⇒ scaledDt === 0 ⇒ all four system update loops effectively
+    // freeze (cooldowns don't tick, projectiles don't move, spawn
+    // timers don't advance, respawn timers don't advance) — which is
+    // exactly the pause semantic we want.
+    const { timeScale } = getGameStore();
+    const scaledDt = (delta / 1000) * timeScale;
+    this.systems.ai.update(scaledDt);
+    this.systems.damage.update(scaledDt);
+    this.systems.wave.update(scaledDt);
+    this.systems.economy.update(scaledDt);
     // Sprite-binder reads tile positions off AI.* behaviour records, so
     // the tick MUST run after the AI update or sprites lag a frame.
+    // It has no `dt` accumulator of its own — pure render reader — so
+    // it is intentionally NOT scaled.
     this.spriteBinder?.tick();
   }
 
@@ -248,9 +272,11 @@ export class GameScene extends Phaser.Scene {
     this.offSelectTile?.();
     this.offWaveStart?.();
     this.offWaveComplete?.();
+    this.offTimeScale?.();
     this.offSelectTile = null;
     this.offWaveStart = null;
     this.offWaveComplete = null;
+    this.offTimeScale = null;
     this.spriteBinder?.destroy();
     this.spriteBinder = null;
     this.systems?.destroy();

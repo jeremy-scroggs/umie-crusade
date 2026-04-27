@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useGameStore } from '@/state/gameStore';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { useGameStore, TIME_SCALES, isTimeScale } from '@/state/gameStore';
 import { Economy } from '@/game/systems/Economy';
 import { GameEvents } from '@/game/systems/events';
 import type { WaveCompletePayload } from '@/game/systems/events';
@@ -192,6 +192,58 @@ describe('gameStore', () => {
       useGameStore.getState().winRun();
       useGameStore.getState().reset();
       expect(useGameStore.getState().runStatus).toBe('running');
+    });
+  });
+
+  describe('timeScale slice', () => {
+    it('exposes the canonical TIME_SCALES tuple', () => {
+      // Lock the supported set so a future change to the tuple is a
+      // visible breaking-change (HUD #76 reads the same tuple).
+      expect([...TIME_SCALES]).toEqual([0, 1, 2, 4]);
+    });
+
+    it('isTimeScale guards every member of the tuple', () => {
+      for (const n of TIME_SCALES) {
+        expect(isTimeScale(n)).toBe(true);
+      }
+    });
+
+    it('isTimeScale rejects values outside the tuple', () => {
+      expect(isTimeScale(3)).toBe(false);
+      expect(isTimeScale(0.5)).toBe(false);
+      expect(isTimeScale(-1)).toBe(false);
+      expect(isTimeScale(Number.NaN)).toBe(false);
+    });
+
+    it('starts at 1', () => {
+      expect(useGameStore.getState().timeScale).toBe(1);
+    });
+
+    it.each(TIME_SCALES)('setTimeScale accepts %s', (n) => {
+      useGameStore.getState().setTimeScale(n);
+      expect(useGameStore.getState().timeScale).toBe(n);
+    });
+
+    it('setTimeScale rejects out-of-set values (no-op + warn)', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        useGameStore.getState().setTimeScale(2);
+        expect(useGameStore.getState().timeScale).toBe(2);
+        useGameStore.getState().setTimeScale(3);
+        expect(useGameStore.getState().timeScale).toBe(2);
+        useGameStore.getState().setTimeScale(0.5);
+        expect(useGameStore.getState().timeScale).toBe(2);
+        expect(warn).toHaveBeenCalledTimes(2);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('reset returns timeScale to 1', () => {
+      useGameStore.getState().setTimeScale(4);
+      expect(useGameStore.getState().timeScale).toBe(4);
+      useGameStore.getState().reset();
+      expect(useGameStore.getState().timeScale).toBe(1);
     });
   });
 

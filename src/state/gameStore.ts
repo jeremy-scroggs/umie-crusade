@@ -28,6 +28,25 @@ const INITIAL_HERO_ABILITY: HeroAbilityState = {
 export type RunStatus = 'running' | 'won' | 'lost';
 
 /**
+ * Allowed simulation-time multipliers. `0` is pause; `1`/`2`/`4` are
+ * the player-facing speed presets (HUD wiring lands in #76).
+ *
+ * Defined once as a literal tuple so both the static `TimeScale` type
+ * and the runtime validator (`isTimeScale`) derive from the same
+ * source — we never want to hardcode the set in two places (per
+ * CLAUDE.md: "do NOT hardcode in multiple places").
+ */
+export const TIME_SCALES = [0, 1, 2, 4] as const;
+export type TimeScale = (typeof TIME_SCALES)[number];
+
+/** Runtime guard — true when `n` matches one of `TIME_SCALES`. */
+export const isTimeScale = (n: number): n is TimeScale =>
+  (TIME_SCALES as readonly number[]).includes(n);
+
+/** Default speed when a run begins (and after `reset()`). */
+const DEFAULT_TIME_SCALE: TimeScale = 1;
+
+/**
  * Grid cell — duplicated locally (rather than imported from
  * Pathfinding) to keep `gameStore` framework-agnostic. The shape
  * matches `Pathfinding.Cell` exactly; callers (input integration in
@@ -87,6 +106,14 @@ export interface GameState {
    */
   selectedTile: SelectedCell | null;
   selectedWall: SelectedWall | null;
+  /**
+   * Simulation-time multiplier. The Phaser scene mirrors this into
+   * `scene.time.timeScale` and multiplies the per-frame `dt` it feeds
+   * each system by this value (#54). `0` pauses the simulation;
+   * `1`/`2`/`4` are the player-facing speed presets. The HUD widget
+   * that exposes these speeds is U4 #76.
+   */
+  timeScale: TimeScale;
   addGold: (amount: number) => void;
   spendGold: (amount: number) => boolean;
   setWave: (wave: number) => void;
@@ -106,6 +133,12 @@ export interface GameState {
   setSelectedTile: (cell: SelectedCell | null) => void;
   setSelectedWall: (wall: SelectedWall | null) => void;
   clearSelection: () => void;
+  /**
+   * Set the simulation-time multiplier. Values not in `TIME_SCALES` are
+   * rejected (no-op + console.warn) so callers that thread an arbitrary
+   * `number` from a UI or URL hash can't smuggle in a fractional speed.
+   */
+  setTimeScale: (n: number) => void;
   reset: () => void;
 }
 
@@ -121,6 +154,7 @@ const INITIAL_STATE = {
   runStatus: 'running' as RunStatus,
   selectedTile: null as SelectedCell | null,
   selectedWall: null as SelectedWall | null,
+  timeScale: DEFAULT_TIME_SCALE,
 };
 
 export const useGameStore = create<GameState>()((set, get) => ({
@@ -178,6 +212,16 @@ export const useGameStore = create<GameState>()((set, get) => ({
   setSelectedWall: (wall) => set({ selectedWall: wall }),
 
   clearSelection: () => set({ selectedTile: null, selectedWall: null }),
+
+  setTimeScale: (n) => {
+    if (!isTimeScale(n)) {
+      // Loud-but-non-fatal: a stray UI handler that passes 3 or 0.5
+      // should leave the store untouched rather than break the sim.
+      console.warn(`gameStore.setTimeScale: rejected value ${n}; expected one of ${TIME_SCALES.join('/')}.`);
+      return;
+    }
+    set({ timeScale: n });
+  },
 
   reset: () => set(INITIAL_STATE),
 }));
