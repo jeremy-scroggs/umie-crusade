@@ -33,6 +33,7 @@ import {
 } from '@/game/systems';
 import { Hero } from '@/game/entities/Hero';
 import { Orc } from '@/game/entities/Orc';
+import type { Human } from '@/game/entities/Human';
 import {
   Damageable,
   type EventEmitterLike,
@@ -126,6 +127,21 @@ export interface SceneBootstrapOptions {
   preplacedOrcCount?: number;
   /** Optional hit-tester for InputSystem. Defaults to a tile-grid hit-test. */
   hitTest?: HitTestFn;
+  /**
+   * Optional fan-out invoked for every spawned human, AFTER it has been
+   * registered with `AISystem.registerHuman` and `Economy.registerHuman`
+   * (so the new human's behaviour record exists by the time the
+   * callback fires). Used by `GameScene` to bind a sprite + wire the
+   * `gameStore.addSkull()` increment on each human's `'died'` event.
+   * Default: no-op — preserves the existing factory contract.
+   */
+  onHumanSpawned?: (human: Human) => void;
+  /**
+   * Optional fan-out invoked once per pre-placed orc, AFTER it has been
+   * registered with `AISystem.registerOrc`. Used by `GameScene` to bind
+   * a sprite for the initial squad. Default: no-op.
+   */
+  onOrcPreplaced?: (orc: Orc) => void;
 }
 
 export interface SceneBootstrap {
@@ -142,6 +158,13 @@ export interface SceneBootstrap {
   readonly edges: SpawnEdgeCells;
   readonly rallyCell: Cell;
   readonly fortCoreCell: Cell;
+  /**
+   * Pre-placed orc squad — handles to every orc registered via the
+   * factory's pre-placement loop. Exposed so callers (GameScene's
+   * sprite binder) can bind visuals after the factory finishes
+   * without poking AISystem internals.
+   */
+  readonly preplacedOrcs: readonly Orc[];
   /** Tear down listeners + clear maps. Scene shutdown calls this. */
   destroy(): void;
 }
@@ -220,15 +243,19 @@ export function createSceneBootstrap(
       const cell = edges[edge];
       ai.registerHuman({ entity: human, cell });
       economy.registerHuman(human);
+      opts.onHumanSpawned?.(human);
     },
   });
 
   // Pre-place a small orc squad at the rally cell. The smoke test does
   // the same — until a training-queue UI lands (M2), defenders spawn
   // with the run so the player has something to fight with.
+  const preplacedOrcs: Orc[] = [];
   for (let i = 0; i < preplacedOrcCount; i += 1) {
     const orc = Orc.fromDef(ORC_DEF);
     ai.registerOrc({ entity: orc, cell: { x: rallyCell.x, y: rallyCell.y } });
+    preplacedOrcs.push(orc);
+    opts.onOrcPreplaced?.(orc);
   }
 
   // Hero (#16). The Hero is constructed against the shared bus so
@@ -264,6 +291,7 @@ export function createSceneBootstrap(
     edges,
     rallyCell,
     fortCoreCell,
+    preplacedOrcs,
     destroy: () => {
       wave.destroy();
       ai.destroy();

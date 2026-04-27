@@ -12,6 +12,10 @@ import {
   type SceneBootstrap,
 } from './scene-bootstrap';
 import { setActiveSystems } from './gameBridge';
+import {
+  SpriteBinder,
+  rectangleFactoryFromScene,
+} from './sprite-binder';
 
 /**
  * GameScene — the live M1 vertical-slice scene.
@@ -36,6 +40,7 @@ import { setActiveSystems } from './gameBridge';
 export class GameScene extends Phaser.Scene {
   private map!: Phaser.Tilemaps.Tilemap;
   private systems: SceneBootstrap | null = null;
+  private spriteBinder: SpriteBinder | null = null;
   private offSelectTile: (() => void) | null = null;
   private offWaveStart: (() => void) | null = null;
   private offWaveComplete: (() => void) | null = null;
@@ -61,10 +66,53 @@ export class GameScene extends Phaser.Scene {
     }
 
     // 2. Wire systems. The shared SimpleEventEmitter is what every
-    // system fans out on — same shape the smoke test uses.
+    // system fans out on — same shape the smoke test uses. The sprite
+    // binder is constructed AFTER systems so the bootstrap's
+    // `onHumanSpawned` / `onOrcPreplaced` callbacks can bind sprites at
+    // spawn-time. Skull credit and sprite binding ride the same
+    // callback path so we don't subscribe to per-entity events twice.
     const bus = new SimpleEventEmitter();
     const store = getGameStore();
-    this.systems = createSceneBootstrap({ emitter: bus, store });
+    // Reset run-scoped skulls so a replay starts at 0.
+    store.setSkulls(0);
+
+    // Forward declare so the bootstrap callbacks can call into the binder.
+    let binder: SpriteBinder | null = null;
+
+    this.systems = createSceneBootstrap({
+      emitter: bus,
+      store,
+      onHumanSpawned: (human) => {
+        // Sprite first (so the rectangle is in place before the entity
+        // can be killed mid-tick), then skull-credit on death.
+        binder?.bindHuman(human);
+        human.emitter.on('died', () => {
+          getGameStore().addSkull();
+        });
+      },
+      onOrcPreplaced: (orc) => {
+        binder?.bindOrc(orc);
+      },
+    });
+
+    // Construct the binder + bind the entities that already exist
+    // (hero + pre-placed orcs already registered above). The
+    // pre-placed orcs registered before `binder` was assigned, so we
+    // bind them explicitly here.
+    this.spriteBinder = new SpriteBinder({
+      rectangleFactory: rectangleFactoryFromScene(this.add),
+      emitter: bus,
+      ai: this.systems.ai,
+      building: this.systems.building,
+    });
+    binder = this.spriteBinder;
+    binder.bindHero(this.systems.hero, this.systems.rallyCell);
+    // Pre-placed orcs were registered before `binder` existed — the
+    // bootstrap returns the squad list so we can bind them now without
+    // poking AISystem internals.
+    for (const o of this.systems.preplacedOrcs) {
+      binder.bindOrc(o);
+    }
 
     // Mirror hero HP into the gameStore so the HUD reflects it.
     store.setHero(
@@ -101,7 +149,9 @@ export class GameScene extends Phaser.Scene {
       bus.off(GameEvents.WaveComplete, onWaveComplete);
 
     // Run lifecycle → gameStore. The wave system emits run:won/run:lost
-    // on the same bus.
+    // on the same bus. The Hedk'nah Pile commit lives on the
+    // RunSummary page (#20) so it only fires on a win path; the scene
+    // does NOT commit here.
     bus.on(GameEvents.RunWon, () => {
       store.winRun();
     });
@@ -189,6 +239,9 @@ export class GameScene extends Phaser.Scene {
     this.systems.damage.update(dt);
     this.systems.wave.update(dt);
     this.systems.economy.update(dt);
+    // Sprite-binder reads tile positions off AI.* behaviour records, so
+    // the tick MUST run after the AI update or sprites lag a frame.
+    this.spriteBinder?.tick();
   }
 
   private teardown(): void {
@@ -198,6 +251,8 @@ export class GameScene extends Phaser.Scene {
     this.offSelectTile = null;
     this.offWaveStart = null;
     this.offWaveComplete = null;
+    this.spriteBinder?.destroy();
+    this.spriteBinder = null;
     this.systems?.destroy();
     this.systems = null;
     setActiveSystems(null);
