@@ -164,3 +164,20 @@ The 307 prior tests must stay green.
    (parity with smoke test). The sprite still renders.
 4. **Placeholder rectangle palette** is a structural visual constant,
    not balance — documented inline.
+5. **Wall tint listens on `'damaged'` not `'damage-state-changed'`.**
+   The `damage-state-changed` event in `Breakable` only fires when
+   `computeSprite()`'s sprite key changes — that ladder uses
+   `>=`-threshold semantics that can settle on the lowest sprite
+   while `currentDamageState()`'s 3-band ladder still reads
+   `'cracked'`. Listening on every damage tick keeps the rectangle
+   tint perfectly aligned with the visual band the player sees.
+
+## Status
+
+Landed across three commits on `feat/29-scene-visuals`:
+1. Sprite-binder skeleton + entity placeholders + bootstrap callbacks.
+2. Hero ability dispatch (`gameBridge.tryHeroAbility`) + skull-credit
+   wiring + AISystem `allHumanBehaviors`/`allOrcBehaviors` accessors.
+3. Plan doc completion marker.
+
+Manual playtest at 375px viewport — DEFERRED TO HUMAN per CLAUDE.md.
