@@ -1,0 +1,23 @@
+{
+  "id": "skowt-hero",
+  "name": "Skowt",
+  "category": "ranged",
+  "faction": "orc",
+  "stats": { "hp": 110, "dps": 16, "speed": 90, "armor": 1 },
+  "cost": { "gold": 120, "trainTime": 10 },
+  "respawnCost": { "gold": 60, "time": 25 },
+  "sprite": "orcs/skowt-hero.png",
+  "animations": ["idle", "walk", "attack", "ability", "death"],
+  "abilities": ["klerg-jat"],
+  "unlockRequirement": null,
+  "flavor": "Umies! Klerg jat!",
+  "kind": "skowt",
+  "role": "scout",
+  "ability": {
+    "id": "klerg-jat",
+    "damage": 60,
+    "radius": 24,
+    "stunMs": 750,
+    "cooldownMs": 9000
+  }
+}
