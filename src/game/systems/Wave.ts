@@ -1,5 +1,4 @@
 import type { SpawnEdge, UnitDef, WaveDef, WaveSpawn } from '@/types';
-import { SimpleEventEmitter } from '@/game/components';
 import type { EventEmitterLike } from '@/game/components';
 import { Human } from '@/game/entities/Human';
 import type { Cell } from './Pathfinding';
@@ -72,8 +71,15 @@ export interface WaveSystemOptions {
    * are also tracked internally for "wave defeated" detection.
    */
   onSpawn: (human: Human, edge: SpawnEdge) => void;
-  /** Optional system event bus — defaults to a `SimpleEventEmitter`. */
-  emitter?: EventEmitterLike;
+  /**
+   * Required system event bus. Lifecycle events (`wave:start`,
+   * `wave:complete`, `run:won`, `run:lost`) fire on this emitter — pass
+   * the same bus the rest of your systems share so HUD / Economy / scene
+   * listeners actually receive them. Required (no default) by design:
+   * an earlier optional + local-fallback shape silently dropped events
+   * for any caller that forgot to thread the shared bus (#27).
+   */
+  emitter: EventEmitterLike;
   /**
    * Source of currently-alive humans for "wave defeated" detection.
    * Defaults to the system's own `spawnedHumans` set (filtered by
@@ -135,7 +141,7 @@ export class WaveSystem {
     this.edges = opts.edges;
     this.fortCore = opts.fortCore;
     this.onSpawn = opts.onSpawn;
-    this.emitter = opts.emitter ?? new SimpleEventEmitter();
+    this.emitter = opts.emitter;
     this.humansProvider =
       opts.humansProvider ?? (() => this.defaultHumansProvider());
 

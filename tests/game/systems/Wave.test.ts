@@ -61,6 +61,7 @@ describe('WaveSystem — spawn count + timing (AC)', () => {
       edges,
       fortCore,
       onSpawn,
+      emitter: new SimpleEventEmitter(),
     });
 
     sys.start();
@@ -116,6 +117,7 @@ describe('WaveSystem — spawn count + timing (AC)', () => {
       onSpawn: (_h, edge) => {
         seen.push(edge);
       },
+      emitter: new SimpleEventEmitter(),
     });
     sys.start();
     sys.update(0.1);
@@ -141,6 +143,7 @@ describe('WaveSystem — spawn count + timing (AC)', () => {
       edges,
       fortCore,
       onSpawn,
+      emitter: new SimpleEventEmitter(),
     });
     sys.start();
     // dt=10s — well past every emission. Should fire all 4.
@@ -174,6 +177,7 @@ describe('WaveSystem — wave:start / wave:complete events', () => {
       edges,
       fortCore,
       onSpawn: () => {},
+      emitter: new SimpleEventEmitter(),
     });
     sys.emitter.on(GameEvents.WaveStart, onWaveStart);
     sys.start();
@@ -211,6 +215,7 @@ describe('WaveSystem — wave:start / wave:complete events', () => {
       onSpawn: (h) => {
         spawned.push(h);
       },
+      emitter: new SimpleEventEmitter(),
     });
     sys.emitter.on(GameEvents.WaveComplete, onWaveComplete);
 
@@ -273,6 +278,7 @@ describe('WaveSystem — multi-wave + run:won', () => {
       edges,
       fortCore,
       onSpawn: (h) => spawned.push(h),
+      emitter: new SimpleEventEmitter(),
     });
 
     sys.emitter.on(GameEvents.WaveStart, startSpy);
@@ -311,6 +317,7 @@ describe('WaveSystem — multi-wave + run:won', () => {
       edges,
       fortCore,
       onSpawn: () => {},
+      emitter: new SimpleEventEmitter(),
     });
     sys.emitter.on(GameEvents.WaveStart, startSpy);
     sys.start();
@@ -341,6 +348,7 @@ describe('WaveSystem — run:lost (fort-core destruction) (AC)', () => {
       edges,
       fortCore,
       onSpawn,
+      emitter: new SimpleEventEmitter(),
     });
     sys.emitter.on(GameEvents.RunLost, lostSpy);
     sys.emitter.on(GameEvents.RunWon, wonSpy);
@@ -371,6 +379,7 @@ describe('WaveSystem — run:lost (fort-core destruction) (AC)', () => {
       edges,
       fortCore,
       onSpawn: () => {},
+      emitter: new SimpleEventEmitter(),
     });
     sys.emitter.on(GameEvents.RunLost, lostSpy);
     sys.start();
@@ -391,6 +400,7 @@ describe('WaveSystem — lifecycle', () => {
       edges,
       fortCore,
       onSpawn: () => {},
+      emitter: new SimpleEventEmitter(),
     });
     sys.emitter.on(GameEvents.WaveStart, startSpy);
     sys.start();
@@ -407,6 +417,7 @@ describe('WaveSystem — lifecycle', () => {
       edges,
       fortCore,
       onSpawn: () => {},
+      emitter: new SimpleEventEmitter(),
     });
     sys.emitter.on(GameEvents.RunLost, lostSpy);
     sys.start();
@@ -433,6 +444,7 @@ describe('WaveSystem — lifecycle', () => {
       edges,
       fortCore,
       onSpawn: () => {},
+      emitter: new SimpleEventEmitter(),
     });
     sys.start();
     expect(() => sys.update(0.1)).toThrow(/unknown unitId/);
