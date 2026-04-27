@@ -1,7 +1,7 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { dataRegistry } from '../src/data/schemas/index';
+import { dataRegistry, dataFileOverrides } from '../src/data/schemas/index';
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
@@ -18,13 +18,20 @@ for (const [subdir, schema] of Object.entries(dataRegistry)) {
   const absDir = join(dataDir, subdir);
   let entries: string[];
   try {
-    entries = readdirSync(absDir).filter((f) => f.endsWith('.json'));
+    entries = readdirSync(absDir)
+      .filter((f) => f.endsWith('.json'))
+      // Skip nested-subdir entries when we have a more specific
+      // registry entry that handles them (e.g. `waves` vs
+      // `waves/patterns`). Top-level dir only iterates JSON files.
+      .filter((f) => statSync(join(absDir, f)).isFile());
   } catch {
     continue;
   }
 
   for (const file of entries) {
     const relPath = `src/data/${subdir}/${file}`;
+    const overrideKey = `${subdir}/${file}`;
+    const effective = dataFileOverrides[overrideKey] ?? schema;
     const raw = readFileSync(join(absDir, file), 'utf-8');
     let json: unknown;
     try {
@@ -36,7 +43,7 @@ for (const [subdir, schema] of Object.entries(dataRegistry)) {
       continue;
     }
 
-    const result = schema.safeParse(json);
+    const result = effective.safeParse(json);
     if (result.success) {
       console.log(`${GREEN}✓${RESET} ${relPath}`);
       passed++;

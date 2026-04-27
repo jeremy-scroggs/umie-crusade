@@ -1,0 +1,10 @@
+{
+  "id": "priest_column",
+  "units": [
+    { "unitId": "paladins-of-compassion", "weight": 3 },
+    { "unitId": "order-of-honor", "weight": 3 },
+    { "unitId": "knights-of-valor", "weight": 1 }
+  ],
+  "edgeBias": ["N", "S"],
+  "cry": "battle.priestColumn"
+}

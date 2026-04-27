@@ -1,0 +1,13 @@
+{
+  "id": "m2-default",
+  "waveCount": 20,
+  "baseBudget": 40,
+  "budgetGrowth": 12,
+  "patterns": [
+    "skirmish_harass",
+    "siege_push",
+    "priest_column",
+    "paladin_advance"
+  ],
+  "rewardPerWave": { "gold": 25 }
+}

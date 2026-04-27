@@ -1,0 +1,10 @@
+{
+  "id": "siege_push",
+  "units": [
+    { "unitId": "knights-of-valor", "weight": 3 },
+    { "unitId": "order-of-honor", "weight": 4 },
+    { "unitId": "paladins-of-compassion", "weight": 1 }
+  ],
+  "edgeBias": ["N"],
+  "cry": "battle.siegePush"
+}

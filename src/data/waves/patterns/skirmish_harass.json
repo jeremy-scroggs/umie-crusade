@@ -1,0 +1,9 @@
+{
+  "id": "skirmish_harass",
+  "units": [
+    { "unitId": "peasant-levy", "weight": 4 },
+    { "unitId": "rangers-of-justice", "weight": 3 }
+  ],
+  "edgeBias": ["W", "N"],
+  "cry": "battle.skirmishHarass"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "paladin_advance",
+  "units": [
+    { "unitId": "knights-of-valor", "weight": 5 },
+    { "unitId": "paladins-of-compassion", "weight": 2 },
+    { "unitId": "order-of-honor", "weight": 2 }
+  ],
+  "edgeBias": ["N", "W"],
+  "cry": "battle.paladinAdvance"
+}
