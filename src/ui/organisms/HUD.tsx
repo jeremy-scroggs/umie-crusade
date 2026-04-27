@@ -53,7 +53,7 @@ export function HUD() {
         data-testid="hud-root"
         className="absolute inset-x-0 top-0 z-10 flex flex-wrap items-center gap-2 p-2"
       >
-        <ResourcePill label={t('hud.gold')} value={gold} />
+        <ResourcePill label={t('hud.bludgelt')} value={gold} />
         <WaveBadge label={t('hud.wave')} value={wave} />
         <SkullCounter ariaLabel={t('hud.skullsAria')} value={skulls} />
         <HeroStatus label={t('hud.heroHp')} hp={heroHp} maxHp={heroMaxHp} />

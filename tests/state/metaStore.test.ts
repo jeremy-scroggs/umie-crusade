@@ -7,9 +7,8 @@ const STORAGE_KEY = 'umie-crusade-meta';
 function makeHero(overrides: Partial<Hero> = {}): Hero {
   return {
     id: 'hero-1',
-    name: "Mougg'r",
-    bloodline: 'mougg-r',
-    heroDefId: 'mougg-r-hero',
+    name: 'Brute',
+    heroDefId: 'brute-hero',
     createdAt: 1_700_000_000_000,
     ...overrides,
   };

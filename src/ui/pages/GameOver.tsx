@@ -52,7 +52,7 @@ export function GameOver() {
             <dd className="tabular-nums">{skulls}</dd>
           </div>
           <div className="flex items-baseline justify-between gap-4">
-            <dt className="text-yellow-400">{t('runEnd.statsGold')}</dt>
+            <dt className="text-yellow-400">{t('runEnd.statsBludgelt')}</dt>
             <dd className="tabular-nums">{gold}</dd>
           </div>
         </dl>

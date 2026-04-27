@@ -12,12 +12,12 @@ import { Orc } from '@/game/entities/Orc';
 import { Human } from '@/game/entities/Human';
 import { Building } from '@/game/entities/Building';
 import { SimpleEventEmitter } from '@/game/components';
-import mouggGrunt from '@/data/orcs/mougg-grunt.json';
+import grunt from '@/data/orcs/grunt.json';
 import peasantLevy from '@/data/humans/peasant-levy.json';
 import wallWood from '@/data/buildings/wall-wood.json';
 import type { UnitDef, BuildingDef } from '@/types';
 
-const orcDef = mouggGrunt as UnitDef;
+const orcDef = grunt as UnitDef;
 const humanDef = peasantLevy as UnitDef;
 const wallDef = wallWood as BuildingDef;
 

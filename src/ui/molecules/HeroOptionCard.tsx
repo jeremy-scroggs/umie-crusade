@@ -1,22 +1,22 @@
 import type { HeroDef } from '@/types';
 
-interface BloodlineCardProps {
+interface HeroOptionCardProps {
   heroDef: HeroDef;
   selected: boolean;
   onSelect: () => void;
 }
 
 /**
- * Presents a single bloodline option — portrait + name + description. M1 has
- * only Mougg'r, but the card shape scales to a multi-option picker later
- * (#16-flavoured work). "Description" sources from `heroDef.flavor` since the
+ * Presents a single hero unit option — portrait + name + description. M1
+ * ships with only the Brute, but the card shape scales to a multi-option
+ * picker later. "Description" sources from `heroDef.flavor` since the
  * hero JSON doesn't carry a long-form bio yet.
  */
-export function BloodlineCard({
+export function HeroOptionCard({
   heroDef,
   selected,
   onSelect,
-}: BloodlineCardProps) {
+}: HeroOptionCardProps) {
   return (
     <button
       type="button"
@@ -37,9 +37,6 @@ export function BloodlineCard({
         <div className="flex flex-col">
           <span className="font-mono text-base text-white">
             {heroDef.name}
-          </span>
-          <span className="font-mono text-xs uppercase tracking-wider text-white/60">
-            {heroDef.bloodline}
           </span>
         </div>
       </div>

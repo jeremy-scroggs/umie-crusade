@@ -6,7 +6,7 @@ import type { WaveCompletePayload } from '@/game/systems/events';
 import { Human } from '@/game/entities/Human';
 import { Orc } from '@/game/entities/Orc';
 import peasantLevy from '@/data/humans/peasant-levy.json';
-import mouggGrunt from '@/data/orcs/mougg-grunt.json';
+import grunt from '@/data/orcs/grunt.json';
 import m1Wave1 from '@/data/waves/m1-wave-1.json';
 import type { UnitDef, WaveDef } from '@/types';
 
@@ -229,7 +229,7 @@ describe('gameStore', () => {
 
 describe('gameStore + Economy — kill -> respawn -> wave-complete math (AC)', () => {
   const humanDef = peasantLevy as UnitDef;
-  const orcDef = mouggGrunt as UnitDef;
+  const orcDef = grunt as UnitDef;
   const wave1 = m1Wave1 as WaveDef;
 
   beforeEach(() => {
@@ -260,7 +260,7 @@ describe('gameStore + Economy — kill -> respawn -> wave-complete math (AC)', (
 
     // 4. Request orc respawn -> debit respawnCost.gold
     const cost = orcDef.respawnCost;
-    if (!cost) throw new Error('fixture: mougg-grunt must have respawnCost');
+    if (!cost) throw new Error('fixture: grunt must have respawnCost');
     const orc = Orc.fromDef(orcDef);
     const respawn = economy.requestRespawn(orc);
     expect(respawn).toEqual({ ok: true, respawnAt: cost.time });

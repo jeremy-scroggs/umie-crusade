@@ -1,7 +1,6 @@
 {
   "id": "peasant-levy",
   "name": "Peasant Levy",
-  "bloodline": "none",
   "category": "fodder",
   "faction": "human",
   "stats": { "hp": 20, "dps": 3, "speed": 70, "armor": 0 },

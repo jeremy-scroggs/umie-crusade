@@ -8,12 +8,12 @@ import {
 import { waveDefSchema } from '@/data/schemas/wave.schema';
 import { heroDefSchema } from '@/data/schemas/hero.schema';
 import { stringsDefSchema } from '@/data/schemas/strings.schema';
-import mouggGrunt from '@/data/orcs/mougg-grunt.json';
+import grunt from '@/data/orcs/grunt.json';
 import enStrings from '@/data/strings/en.json';
 
 describe('unit schema', () => {
-  it('accepts mougg-grunt.json', () => {
-    const result = unitDefSchema.safeParse(mouggGrunt);
+  it('accepts grunt.json', () => {
+    const result = unitDefSchema.safeParse(grunt);
     if (!result.success) console.error(result.error.format());
     expect(result.success).toBe(true);
   });
@@ -22,7 +22,6 @@ describe('unit schema', () => {
     const human = {
       id: 'peasant-levy',
       name: 'Peasant Levy',
-      bloodline: 'none',
       category: 'fodder',
       faction: 'human',
       stats: { hp: 20, dps: 3, speed: 70, armor: 0 },
@@ -42,19 +41,19 @@ describe('unit schema', () => {
   });
 
   it('rejects negative hp', () => {
-    const invalid = { ...mouggGrunt, stats: { ...mouggGrunt.stats, hp: -10 } };
+    const invalid = { ...grunt, stats: { ...grunt.stats, hp: -10 } };
     expect(unitDefSchema.safeParse(invalid).success).toBe(false);
   });
 
   it('rejects invalid category', () => {
     expect(
-      unitDefSchema.safeParse({ ...mouggGrunt, category: 'dragon' }).success,
+      unitDefSchema.safeParse({ ...grunt, category: 'dragon' }).success,
     ).toBe(false);
   });
 
   it('rejects invalid faction', () => {
     expect(
-      unitDefSchema.safeParse({ ...mouggGrunt, faction: 'elf' }).success,
+      unitDefSchema.safeParse({ ...grunt, faction: 'elf' }).success,
     ).toBe(false);
   });
 });
@@ -164,7 +163,7 @@ describe('wave schema', () => {
 
 describe('hero schema', () => {
   const valid = {
-    ...mouggGrunt,
+    ...grunt,
     ability: {
       id: 'clompuk',
       damage: 30,
@@ -196,18 +195,18 @@ describe('strings schema', () => {
   });
 
   it('rejects a non-string value', () => {
-    expect(stringsDefSchema.safeParse({ 'hud.gold': 1 }).success).toBe(false);
+    expect(stringsDefSchema.safeParse({ 'hud.bludgelt': 1 }).success).toBe(false);
   });
 
   it('rejects a bundle missing a required key', () => {
-    const { 'hud.gold': _dropped, ...withoutHudGold } = enStrings;
+    const { 'hud.bludgelt': _dropped, ...withoutHudBludgelt } = enStrings;
     void _dropped;
-    expect(stringsDefSchema.safeParse(withoutHudGold).success).toBe(false);
+    expect(stringsDefSchema.safeParse(withoutHudBludgelt).success).toBe(false);
   });
 
   it('rejects an empty string value', () => {
     expect(
-      stringsDefSchema.safeParse({ ...enStrings, 'hud.gold': '' }).success,
+      stringsDefSchema.safeParse({ ...enStrings, 'hud.bludgelt': '' }).success,
     ).toBe(false);
   });
 });

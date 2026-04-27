@@ -7,7 +7,7 @@ import { z } from 'zod';
 export const stringsDefSchema = z.object({
   'game.title': z.string().min(1),
 
-  'hud.gold': z.string().min(1),
+  'hud.bludgelt': z.string().min(1),
   'hud.wave': z.string().min(1),
   'hud.lives': z.string().min(1),
   'hud.skulls': z.string().min(1),
@@ -21,7 +21,7 @@ export const stringsDefSchema = z.object({
   'menu.credits': z.string().min(1),
 
   'hero.create.title': z.string().min(1),
-  'hero.create.bloodlineLabel': z.string().min(1),
+  'hero.create.unitLabel': z.string().min(1),
   'hero.create.nameLabel': z.string().min(1),
   'hero.create.namePlaceholder': z.string().min(1),
   'hero.create.beginButton': z.string().min(1),
@@ -29,7 +29,7 @@ export const stringsDefSchema = z.object({
   'build.wall': z.string().min(1),
   'build.ballista': z.string().min(1),
   'build.repair': z.string().min(1),
-  'build.insufficientGold': z.string().min(1),
+  'build.insufficientBludgelt': z.string().min(1),
 
   'battle.waveStart': z.string().min(1),
   'battle.charge': z.string().min(1),
@@ -45,7 +45,7 @@ export const stringsDefSchema = z.object({
 
   'runEnd.statsWave': z.string().min(1),
   'runEnd.statsSkulls': z.string().min(1),
-  'runEnd.statsGold': z.string().min(1),
+  'runEnd.statsBludgelt': z.string().min(1),
   'runEnd.replay': z.string().min(1),
   'runEnd.mainMenu': z.string().min(1),
 

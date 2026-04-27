@@ -1,4 +1,4 @@
-import muggrJson from '@/data/heroes/mougg-r.json';
+import bruteJson from '@/data/heroes/brute.json';
 import { heroDefSchema } from '@/data/schemas';
 import { useMetaStore } from '@/state/metaStore';
 import { RUN_EVENTS, runSignal, type BeginRunPayload } from '@/state/runSignal';
@@ -11,8 +11,8 @@ import {
 // Validate at module load — if the hero JSON ever drifts from the schema we
 // want a loud failure, not a silent `as HeroDef` cast. `parse` throws on
 // mismatch, which surfaces in dev + tests.
-const MUGGR: HeroDef = heroDefSchema.parse(muggrJson);
-const BLOODLINES: HeroDef[] = [MUGGR];
+const BRUTE: HeroDef = heroDefSchema.parse(bruteJson);
+const UNITS: HeroDef[] = [BRUTE];
 
 /**
  * Generate a roster id. `crypto.randomUUID` is available in jsdom (via node's
@@ -30,7 +30,6 @@ export function HeroCreate() {
     const hero: Hero = {
       id: newHeroId(),
       name,
-      bloodline: heroDef.bloodline,
       heroDefId: heroDef.id,
       createdAt: Date.now(),
     };
@@ -44,7 +43,7 @@ export function HeroCreate() {
   return (
     <div className="min-h-screen w-full bg-black">
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-6 p-4">
-        <HeroCreateForm bloodlines={BLOODLINES} onSubmit={handleSubmit} />
+        <HeroCreateForm units={UNITS} onSubmit={handleSubmit} />
       </main>
     </div>
   );

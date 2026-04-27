@@ -20,7 +20,6 @@ export const respawnCostSchema = z.object({
 export const unitDefSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
-  bloodline: z.string().min(1),
   category: z.enum(['melee', 'ranged', 'caster', 'builder', 'siege', 'healer', 'fodder']),
   faction: z.enum(['orc', 'human']),
   stats: unitStatsSchema,

@@ -24,7 +24,7 @@ describe('HUD organism', () => {
 
     render(<HUD />);
 
-    expect(screen.getByText('Gold')).toBeDefined();
+    expect(screen.getByText('Bludgelt')).toBeDefined();
     expect(screen.getByText('120')).toBeDefined();
     expect(screen.getByText('Wave')).toBeDefined();
     expect(screen.getByText('2')).toBeDefined();

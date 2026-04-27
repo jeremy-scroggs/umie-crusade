@@ -7,12 +7,12 @@ import { Building } from '@/game/entities/Building';
 import { SimpleEventEmitter } from '@/game/components/EventEmitter';
 import { Damageable } from '@/game/components/Damageable';
 import type { TargetLike } from '@/game/entities/Projectile';
-import mouggGrunt from '@/data/orcs/mougg-grunt.json';
+import grunt from '@/data/orcs/grunt.json';
 import peasantLevy from '@/data/humans/peasant-levy.json';
 import ballista from '@/data/buildings/ballista.json';
 import type { UnitDef, BuildingDef } from '@/types';
 
-const orcDef = mouggGrunt as UnitDef;
+const orcDef = grunt as UnitDef;
 const humanDef = peasantLevy as UnitDef;
 const ballistaDef = ballista as BuildingDef;
 

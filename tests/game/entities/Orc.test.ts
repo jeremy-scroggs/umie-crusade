@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { Orc } from '@/game/entities/Orc';
 import { Human } from '@/game/entities/Human';
-import mouggGrunt from '@/data/orcs/mougg-grunt.json';
+import grunt from '@/data/orcs/grunt.json';
 import type { UnitDef } from '@/types';
 
-const def = mouggGrunt as UnitDef;
+const def = grunt as UnitDef;
 
 describe('Orc.fromDef', () => {
   it('reads hp and armor from the def (no hardcoded stats)', () => {
@@ -41,7 +41,6 @@ describe('Human.fromDef', () => {
     const humanDef: UnitDef = {
       id: 'peasant-levy',
       name: 'Peasant Levy',
-      bloodline: 'none',
       category: 'fodder',
       faction: 'human',
       stats: { hp: 20, dps: 3, speed: 70, armor: 0 },

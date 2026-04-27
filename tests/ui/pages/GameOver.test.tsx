@@ -35,7 +35,7 @@ describe('GameOver page', () => {
     expect(screen.getByText('3')).toBeDefined();
     expect(screen.getByText('Skulls taken')).toBeDefined();
     expect(screen.getByText('2')).toBeDefined();
-    expect(screen.getByText('Gold earned')).toBeDefined();
+    expect(screen.getByText('Bludgelt earned')).toBeDefined();
     expect(screen.getByText('40')).toBeDefined();
   });
 

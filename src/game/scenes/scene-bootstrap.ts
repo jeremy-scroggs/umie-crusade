@@ -42,9 +42,9 @@ import type { HeroDef, UnitDef, WallDef, WaveDef } from '@/types';
 
 import m1Slice from '@/data/maps/m1-slice.json';
 import peasantLevy from '@/data/humans/peasant-levy.json';
-import mouggGruntJson from '@/data/orcs/mougg-grunt.json';
+import gruntJson from '@/data/orcs/grunt.json';
 import wallWood from '@/data/buildings/wall-wood.json';
-import muggrJson from '@/data/heroes/mougg-r.json';
+import bruteJson from '@/data/heroes/brute.json';
 import wave1 from '@/data/waves/m1-wave-1.json';
 import wave2 from '@/data/waves/m1-wave-2.json';
 import wave3 from '@/data/waves/m1-wave-3.json';
@@ -97,8 +97,8 @@ const DEFAULT_PRE_PLACED_ORC_COUNT = 6;
 const HUMAN_DEFS: Readonly<Record<string, UnitDef>> = {
   'peasant-levy': peasantLevy as UnitDef,
 };
-const ORC_DEF = mouggGruntJson as UnitDef;
-const HERO_DEF = muggrJson as HeroDef;
+const ORC_DEF = gruntJson as UnitDef;
+const HERO_DEF = bruteJson as HeroDef;
 const WALL_DEF = wallWood as WallDef;
 const M1_WAVES: WaveDef[] = [
   wave1 as WaveDef,

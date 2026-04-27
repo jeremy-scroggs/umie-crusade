@@ -3,7 +3,7 @@ interface BuildSlotProps {
   label: string;
   /** Build cost in gold. Must come from a JSON def — never hardcode. */
   cost: number;
-  /** Localised "Gold" prefix on the cost chip. From i18n. */
+  /** Localised "Bludgelt" prefix on the cost chip. From i18n. */
   goldLabel: string;
   /** True iff the player can afford `cost`. */
   affordable: boolean;
@@ -19,7 +19,7 @@ interface BuildSlotProps {
  * BuildSlot — single buildable option in the BuildPanel.
  *
  * Mobile-first: `min-h-[44px]` satisfies iOS tap-target guidance. The
- * card layout mirrors `BloodlineCard` so the BuildPanel feels at home
+ * card layout mirrors `HeroOptionCard` so the BuildPanel feels at home
  * with the rest of the overlay UI.
  *
  * Affordability is owned by the parent (`BuildPanel`) — the slot itself

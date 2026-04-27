@@ -26,9 +26,9 @@ import { TILE_SIZE } from '@/game/config/tile';
 
 import m1Slice from '@/data/maps/m1-slice.json';
 import peasantLevy from '@/data/humans/peasant-levy.json';
-import mouggGrunt from '@/data/orcs/mougg-grunt.json';
+import grunt from '@/data/orcs/grunt.json';
 import wallWood from '@/data/buildings/wall-wood.json';
-import muggrJson from '@/data/heroes/mougg-r.json';
+import bruteJson from '@/data/heroes/brute.json';
 import type {
   HeroDef,
   UnitDef,
@@ -163,7 +163,7 @@ beforeEach(() => {
 describe('SpriteBinder — entity rectangles', () => {
   it('binds a hero rectangle at the rally cell', () => {
     const h = buildHarness();
-    const hero = Hero.fromDef(muggrJson as HeroDef);
+    const hero = Hero.fromDef(bruteJson as HeroDef);
     h.binder.bindHero(hero, { x: 27, y: 11 });
     expect(h.binder.counts.hero).toBe(1);
     expect(FakeRectangle.all.length).toBe(1);
@@ -175,7 +175,7 @@ describe('SpriteBinder — entity rectangles', () => {
 
   it('binds an orc rectangle and updates position on tick', () => {
     const h = buildHarness();
-    const orc = Orc.fromDef(mouggGrunt as UnitDef);
+    const orc = Orc.fromDef(grunt as UnitDef);
     h.ai.registerOrc({ entity: orc, cell: { x: 5, y: 5 } });
     h.binder.bindOrc(orc);
     expect(h.binder.counts.orcs).toBe(1);
@@ -256,8 +256,8 @@ describe('SpriteBinder — entity rectangles', () => {
 
   it('destroy() tears down every tracked rectangle and listener', () => {
     const h = buildHarness();
-    const hero = Hero.fromDef(muggrJson as HeroDef);
-    const orc = Orc.fromDef(mouggGrunt as UnitDef);
+    const hero = Hero.fromDef(bruteJson as HeroDef);
+    const orc = Orc.fromDef(grunt as UnitDef);
     const human = Human.fromDef(peasantLevy as UnitDef);
     h.ai.registerOrc({ entity: orc, cell: { x: 5, y: 5 } });
     h.ai.registerHuman({ entity: human, cell: { x: 0, y: 11 } });

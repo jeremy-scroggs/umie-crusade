@@ -1,15 +1,14 @@
 {
-  "id": "mougg-grunt",
-  "name": "Scrag",
-  "bloodline": "mougg-r",
+  "id": "grunt",
+  "name": "Grunt",
   "category": "melee",
   "faction": "orc",
   "stats": { "hp": 80, "dps": 12, "speed": 60, "armor": 2 },
   "cost": { "gold": 25, "trainTime": 4 },
   "respawnCost": { "gold": 15, "time": 10 },
-  "sprite": "orcs/mougg-grunt.png",
+  "sprite": "orcs/grunt.png",
   "animations": ["idle", "walk", "attack", "death"],
   "abilities": ["stun"],
   "unlockRequirement": null,
-  "flavor": "Mougg klerg! Clomp jat!"
+  "flavor": "Klerg jat!"
 }

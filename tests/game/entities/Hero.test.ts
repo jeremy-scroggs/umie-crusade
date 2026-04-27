@@ -2,10 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { Hero } from '@/game/entities/Hero';
 import type { HeroAbilityTargetLike } from '@/game/entities/Hero';
 import { Damageable, SimpleEventEmitter } from '@/game/components';
-import mouggR from '@/data/heroes/mougg-r.json';
+import bruteJson from '@/data/heroes/brute.json';
 import type { HeroDef } from '@/types';
 
-const heroDef = mouggR as HeroDef;
+const heroDef = bruteJson as HeroDef;
 
 /** Build a plain target that satisfies HeroAbilityTargetLike. */
 const makeTarget = (

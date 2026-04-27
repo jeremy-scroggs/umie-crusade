@@ -27,8 +27,8 @@ const BUILD_LABELS = {
   wall: t('build.wall'),
   ballista: t('build.ballista'),
   repair: t('build.repair'),
-  insufficientGold: t('build.insufficientGold'),
-  goldPrefix: t('hud.gold'),
+  insufficientGold: t('build.insufficientBludgelt'),
+  goldPrefix: t('hud.bludgelt'),
 };
 
 /**

@@ -6,12 +6,12 @@ import type { WaveCompletePayload } from '@/game/systems/events';
 import { SimpleEventEmitter } from '@/game/components/EventEmitter';
 import { Human } from '@/game/entities/Human';
 import { Orc } from '@/game/entities/Orc';
-import mouggGrunt from '@/data/orcs/mougg-grunt.json';
+import grunt from '@/data/orcs/grunt.json';
 import peasantLevy from '@/data/humans/peasant-levy.json';
 import m1Wave1 from '@/data/waves/m1-wave-1.json';
 import type { UnitDef, WaveDef } from '@/types';
 
-const orcDef = mouggGrunt as UnitDef;
+const orcDef = grunt as UnitDef;
 const humanDef = peasantLevy as UnitDef;
 const wave1 = m1Wave1 as WaveDef;
 
@@ -89,7 +89,7 @@ describe('Economy — human kills', () => {
 describe('Economy — orc respawn', () => {
   it('debits gold and starts a timer when funded', () => {
     const cost = orcDef.respawnCost;
-    if (!cost) throw new Error('fixture: mougg-grunt must have respawnCost');
+    if (!cost) throw new Error('fixture: grunt must have respawnCost');
     const store = makeStubStore(cost.gold * 2);
     const economy = new Economy({ store });
     const orc = Orc.fromDef(orcDef);
@@ -103,7 +103,7 @@ describe('Economy — orc respawn', () => {
 
   it('returns insufficient-gold when under-funded; store untouched (AC)', () => {
     const cost = orcDef.respawnCost;
-    if (!cost) throw new Error('fixture: mougg-grunt must have respawnCost');
+    if (!cost) throw new Error('fixture: grunt must have respawnCost');
     const store = makeStubStore(cost.gold - 1);
     const economy = new Economy({ store });
     const orc = Orc.fromDef(orcDef);
@@ -125,7 +125,7 @@ describe('Economy — orc respawn', () => {
 
   it('fires respawn-ready event when the timer elapses (AC)', () => {
     const cost = orcDef.respawnCost;
-    if (!cost) throw new Error('fixture: mougg-grunt must have respawnCost');
+    if (!cost) throw new Error('fixture: grunt must have respawnCost');
     const store = makeStubStore(cost.gold);
     const economy = new Economy({ store });
     const orc = Orc.fromDef(orcDef);
@@ -146,7 +146,7 @@ describe('Economy — orc respawn', () => {
 
   it('progresses the timer across multiple ticks', () => {
     const cost = orcDef.respawnCost;
-    if (!cost) throw new Error('fixture: mougg-grunt must have respawnCost');
+    if (!cost) throw new Error('fixture: grunt must have respawnCost');
     const store = makeStubStore(cost.gold);
     const economy = new Economy({ store });
     const orc = Orc.fromDef(orcDef);

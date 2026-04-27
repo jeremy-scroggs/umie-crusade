@@ -3,7 +3,7 @@ import { t } from '@/lib/i18n';
 import type { HeroDef } from '@/types';
 import { Button } from '@/ui/atoms/Button';
 import { TextInput } from '@/ui/atoms/TextInput';
-import { BloodlineCard } from '@/ui/molecules/BloodlineCard';
+import { HeroOptionCard } from '@/ui/molecules/HeroOptionCard';
 import {
   HERO_NAME_PATTERN,
   MAX_HERO_NAME_LENGTH,
@@ -15,7 +15,7 @@ export interface HeroCreateSubmit {
 }
 
 interface HeroCreateFormProps {
-  bloodlines: HeroDef[];
+  units: HeroDef[];
   onSubmit: (payload: HeroCreateSubmit) => void;
 }
 
@@ -41,19 +41,19 @@ const ERROR_COPY: Record<
 > = {
   empty: 'Name thy warchief.',
   tooLong: `Name must be ${MAX_HERO_NAME_LENGTH} runes or fewer.`,
-  invalidChars: "Letters and apostrophe only ('Mougg'r).",
+  invalidChars: "Letters and apostrophe only ('Brute).",
 };
 
-export function HeroCreateForm({ bloodlines, onSubmit }: HeroCreateFormProps) {
+export function HeroCreateForm({ units, onSubmit }: HeroCreateFormProps) {
   const [selectedId, setSelectedId] = useState<string>(
     // M1 has one option — start selected. Safe because data layer guarantees
     // at least one hero def by the time we reach this page.
-    bloodlines[0]?.id ?? '',
+    units[0]?.id ?? '',
   );
   const [name, setName] = useState('');
   const [touched, setTouched] = useState(false);
 
-  const selectedDef = bloodlines.find((b) => b.id === selectedId);
+  const selectedDef = units.find((u) => u.id === selectedId);
   const validation = validateName(name);
   const showError = touched && !validation.ok;
   const canSubmit = validation.ok && selectedDef !== undefined;
@@ -77,10 +77,10 @@ export function HeroCreateForm({ bloodlines, onSubmit }: HeroCreateFormProps) {
 
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 font-mono text-sm text-white/80">
-          {t('hero.create.bloodlineLabel')}
+          {t('hero.create.unitLabel')}
         </legend>
-        {bloodlines.map((def) => (
-          <BloodlineCard
+        {units.map((def) => (
+          <HeroOptionCard
             key={def.id}
             heroDef={def}
             selected={def.id === selectedId}

@@ -5,7 +5,7 @@
  */
 export const MAX_HERO_NAME_LENGTH = 20;
 
-// Letters + apostrophe: orcish-friendly (e.g. "Mougg'r", "Krog'nak") while
+// Letters + apostrophe: orcish-friendly (e.g. "Krog'nak", "Bludgrak") while
 // excluding spaces, digits, and punctuation that would collide with HUD
 // rendering or save-file identifiers.
 export const HERO_NAME_PATTERN = /^[A-Za-z']+$/;

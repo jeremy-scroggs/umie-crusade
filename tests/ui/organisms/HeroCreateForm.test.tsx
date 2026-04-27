@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { HeroCreateForm } from '@/ui/organisms/HeroCreateForm';
-import muggrJson from '@/data/heroes/mougg-r.json';
+import bruteJson from '@/data/heroes/brute.json';
 import { heroDefSchema } from '@/data/schemas';
 import type { HeroDef } from '@/types';
 
-const MUGGR: HeroDef = heroDefSchema.parse(muggrJson);
+const BRUTE: HeroDef = heroDefSchema.parse(bruteJson);
 
 function renderForm(onSubmit = vi.fn()) {
-  render(<HeroCreateForm bloodlines={[MUGGR]} onSubmit={onSubmit} />);
+  render(<HeroCreateForm units={[BRUTE]} onSubmit={onSubmit} />);
   return { onSubmit };
 }
 
@@ -23,13 +23,13 @@ describe('HeroCreateForm', () => {
     cleanup();
   });
 
-  it('renders title, bloodline card, name input, and Begin button from i18n', () => {
+  it('renders title, hero option card, name input, and Begin button from i18n', () => {
     renderForm();
 
     expect(
       screen.getByRole('heading', { name: 'Forge Thy Warchief' }),
     ).toBeDefined();
-    expect(screen.getByText("Mougg'r")).toBeDefined();
+    expect(screen.getByText('Brute')).toBeDefined();
     expect(screen.getByLabelText('Name')).toBeDefined();
     expect(
       screen.getByRole('button', { name: 'Begin Klerg' }),
@@ -55,7 +55,7 @@ describe('HeroCreateForm', () => {
 
   it('disables Begin when name contains invalid chars (digits or spaces)', () => {
     renderForm();
-    typeName('Mougg 3');
+    typeName('Krog 3');
     const button = screen.getByRole('button', {
       name: 'Begin Klerg',
     }) as HTMLButtonElement;
@@ -66,7 +66,7 @@ describe('HeroCreateForm', () => {
     const onSubmit = vi.fn();
     renderForm(onSubmit);
 
-    typeName("Mougg'r");
+    typeName("Krog'nak");
     const button = screen.getByRole('button', {
       name: 'Begin Klerg',
     }) as HTMLButtonElement;
@@ -79,9 +79,8 @@ describe('HeroCreateForm', () => {
       name: string;
       heroDef: HeroDef;
     };
-    expect(call.name).toBe("Mougg'r");
-    expect(call.heroDef.id).toBe('mougg-r-hero');
-    expect(call.heroDef.bloodline).toBe('mougg-r');
+    expect(call.name).toBe("Krog'nak");
+    expect(call.heroDef.id).toBe('brute-hero');
   });
 
   it('enforces the 20-char maxLength on the input', () => {
@@ -102,9 +101,9 @@ describe('HeroCreateForm', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it('bloodline card exposes pressed state for the selected option', () => {
+  it('hero option card exposes pressed state for the selected option', () => {
     renderForm();
     const card = screen.getByRole('button', { pressed: true });
-    expect(card.textContent).toContain("Mougg'r");
+    expect(card.textContent).toContain('Brute');
   });
 });

@@ -25,7 +25,7 @@ import type { BuildingDef, UnitDef, WaveDef } from '@/types';
 
 import m1Slice from '@/data/maps/m1-slice.json';
 import peasantLevy from '@/data/humans/peasant-levy.json';
-import mouggGrunt from '@/data/orcs/mougg-grunt.json';
+import grunt from '@/data/orcs/grunt.json';
 import wallWood from '@/data/buildings/wall-wood.json';
 import wave1 from '@/data/waves/m1-wave-1.json';
 import wave2 from '@/data/waves/m1-wave-2.json';
@@ -61,7 +61,7 @@ import wave5 from '@/data/waves/m1-wave-5.json';
  */
 
 const humanDef = peasantLevy as UnitDef;
-const orcDef = mouggGrunt as UnitDef;
+const orcDef = grunt as UnitDef;
 const wallDef = wallWood as BuildingDef;
 const map = m1Slice as TiledMapLike;
 const allWaves: WaveDef[] = [

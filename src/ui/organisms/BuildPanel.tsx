@@ -18,7 +18,7 @@ interface BuildPanelLabels {
   ballista: string;
   repair: string;
   insufficientGold: string;
-  /** Localised "Gold" prefix shown on cost chips. From `t('hud.gold')`. */
+  /** Localised "Bludgelt" prefix shown on cost chips. From `t('hud.bludgelt')`. */
   goldPrefix: string;
   /** Optional close-button label — defaults to 'X' if omitted. */
   close?: string;

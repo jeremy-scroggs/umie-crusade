@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Ability } from '@/game/components/Ability';
 import { SimpleEventEmitter } from '@/game/components/EventEmitter';
-import mouggR from '@/data/heroes/mougg-r.json';
+import bruteJson from '@/data/heroes/brute.json';
 import type { HeroDef } from '@/types';
 
-const heroDef = mouggR as HeroDef;
+const heroDef = bruteJson as HeroDef;
 
 const makeAbility = () =>
   new Ability({ def: heroDef.ability, emitter: new SimpleEventEmitter() });

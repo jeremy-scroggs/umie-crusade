@@ -45,14 +45,13 @@ export interface Resource {
   stone: number;
 }
 
-// Roster-level hero record: the player's *instance* of a bloodline. Distinct
+// Roster-level hero record: the player's *instance* of a hero unit. Distinct
 // from `HeroDef` (static JSON definition — stats, sprite, ability). A roster
 // entry carries identity (uuid), the player's chosen name, and a foreign key
 // back into the hero JSON via `heroDefId`.
 export interface Hero {
   id: string;
   name: string;
-  bloodline: string;
   heroDefId: string;
   createdAt: number;
 }

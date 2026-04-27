@@ -36,7 +36,7 @@ describe('RunSummary page', () => {
     expect(screen.getByText('5')).toBeDefined();
     expect(screen.getByText('Skulls taken')).toBeDefined();
     expect(screen.getByText('13')).toBeDefined();
-    expect(screen.getByText('Gold earned')).toBeDefined();
+    expect(screen.getByText('Bludgelt earned')).toBeDefined();
     expect(screen.getByText('120')).toBeDefined();
   });
 
