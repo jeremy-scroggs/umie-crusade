@@ -522,3 +522,111 @@ Per orchestrator scope notes, browser-based playtest at desktop + mobile @ 375px
 - **#23** (tile-size lock chore) → READY (deps: #22 ✓)
 
 Wave 9 = #23 only — final M1 issue.
+
+---
+
+# M1 Retro Metrics — Dry-run wave 9
+
+**Started:** 2026-04-27T02:39:40Z
+**Ended:** 2026-04-27T02:44:35Z
+**Main SHA at start:** 8083514
+**Main SHA at end:** b46f1be
+**Scope:** Wave 9 dry-run — solo issue #23 (tile-size lock chore). Final M1 issue.
+
+## Per-issue
+
+### #23 chore(m1): lock TILE_SIZE = 32 + document
+- **Worker timing:** plan 1m 59s, impl 1m 18s, validate 9s. Wall-clock ≈ 3m 26s.
+- **Orchestrator merge:** ~1m. FAST-PATH (solo wave).
+- **Plan vs actual files:** 6 created/modified.
+- **Conflict:** none.
+- **Decisions made:** Confirmed only one runtime call site (`GameScene.ts`) needed the constant. Zero stray `32` literals in tile-dim contexts. Tiled JSON's `tilewidth: 32` left as-is (format requirement). Created `src/game/config/tile.ts` and `docs/ARCHITECTURE.md`.
+- **Tests:** 306 → 306 (no test churn — purely structural).
+
+## Wave 9 summary
+
+- **Wall-clock:** 4m 55s. Fastest wave.
+- **M1 COMPLETE.**
+
+---
+
+# M1 Retro Metrics — **MILESTONE COMPLETE**
+
+## Headline
+
+- **Total wall-clock:** ~6h across 9 waves over 4 calendar days.
+- **Issues merged:** 23 / 23 (100%).
+- **Issues blocked:** 0.
+- **Auto-resolved conflicts:** 3 (all additive on `src/game/systems/index.ts`).
+- **Hard merge conflicts:** 0.
+- **Tests grew:** 30 → 306 (+276, ~10× growth).
+- **Final main SHA:** `b46f1be`.
+
+## Per-wave summary
+
+| Wave | Issues | Wall-clock | Tests delta | Conflicts | Notes |
+|---|---|---|---|---|---|
+| 1 | #2, #11 | 13m 47s | 30 → 30 | 0 | First parallel run; surfaced worktree-lock issue |
+| 2 | #3, #4, #5, #6, #12 | 33m 49s | 30 → 73 | 0 | Skill v2 patches validated; first non-data issue (#6 entities) |
+| 3 | #7, #8, #18 | 15m 59s | 73 → 118 | 1 (auto) | First structured-resolver trigger; first React UI |
+| 4 | #9, #13, #16 | 14m 14s | 118 → 158 | 1 (auto) | Cross-system integration; gameStore git-native auto-merge |
+| 5 | #10, #14, #17 | 10m 33s | 158 → 214 | 1 (auto) | Fastest 3-issue wave; biggest test growth |
+| 6 | #15, #20, #21 | 1h 1m 38s | 214 → 279 | 0 | Slowest wave; two anomalous 17-19m worker plan phases |
+| 7 | #19 | 12m 59s | 279 → 296 | 0 | Solo wave |
+| 8 | #22 | 12m 9s | 296 → 306 | 0 | Go/no-go gate — conditional GO |
+| 9 | #23 | 4m 55s | 306 → 306 | 0 | Final M1 issue |
+
+## Token cost (rough estimate)
+
+Across 23 worker dispatches, totals approximately:
+- Workers: ~1.5M total tokens
+- Orchestrator (main session): ~250-400k tokens
+
+Per-issue averages: ~50-100k for data-only, ~70-90k for systems, ~70-95k for UI. Worker cost was sublinear in code complexity — the established patterns (composition + structural typing + add-only barrels) compound positively as the codebase grows.
+
+## What worked
+
+1. **Worktree isolation + worker prompts that embed CLAUDE.md** — workers couldn't see project skills (skills are gitignored), but the embedded workflow + project rules in each prompt made them productive immediately. Zero "I don't know how to commit" or "What's the test framework" friction.
+2. **Structural typing over concrete dependencies** — workers built systems with `*Like` interfaces (`EventEmitterLike`, `CameraLike`, `WallLike`, `FortCoreLike`, `BuildingStoreLike`). Integration came together cleanly in #22 with zero hard rework.
+3. **Add-only barrel discipline** — every wave added entries to `src/game/systems/index.ts`, `src/game/components/index.ts`, etc. Three structured-conflict triggers, all auto-resolved by the resolver.
+4. **The skill v3 patches earned their keep** — temp-ref pattern, fast-path test, UTC timestamps, worktree cleanup. Zero merge-handler failures across 23 issues.
+5. **Workers self-bootstrapped via `pnpm install --frozen-lockfile`** when worktrees lacked `node_modules`. The v3 allowance prevented the wave-2 confusion from #12.
+6. **Single conditional-GO smoke test (#22) on first integration pass.** This is the strongest signal that the orchestration model is sound. 8 systems wired together at integration time without redesign, and only 2 soft adapter quirks surfaced.
+7. **The `*Like` discipline + `add-only to different sections of shared files`** combo eliminated entire categories of merge conflict. Wave 6 had ZERO structured-resolver invocations despite 3 workers touching shared files.
+
+## What didn't work / friction points
+
+1. **The stash dance for the status board.** Every slow-path merge required `git stash push docs/plans/status/M1.md` → rebase → pop. Codified in v3 but still ~5s per merge of friction.
+2. **Status board update timing.** Wave 4 missed updating #16's row to `merged` due to stash-pop ordering during the #9 merge. Caught retroactively in wave 5. Skill v4 candidate: explicit "all in-flight rows must be `merged` BEFORE artifacts commit" checkpoint.
+3. **Two workers had 17–19m planning phases (#15, #20 in wave 6).** Hypothesis: as the codebase grows, workers spend more time exploring before planning. Possible mitigation: orchestrator can include "anchor file" hints in worker prompts for moderately complex issues.
+4. **Tiled GUI absent.** The map worker (#5) hand-authored Tiled JSON. Worked, but a real artist pipeline needs the GUI. Documented deviation in #5's plan doc.
+5. **Browser-based verification deferred.** Workers can't run `pnpm dev` or inspect at 375px. Mobile playtests + FPS verification are all human-required. Acceptable for autonomous flow but a known gap.
+6. **One worker (#18) modified `vitest.config.ts` and `tests/setup.ts`** — necessary infrastructure fixes for Node 25 + automatic JSX, but config-level changes deserve human review before landing. Skill v3 has a soft warning; landed despite it.
+7. **`public/data/maps/m1-slice.json` duplicate (#5)** — never confirmed whether needed. Still in the repo. Code-review cleanup item.
+
+## Skill iteration candidates for M2
+
+1. **Codify status-board checkpoint at termination** — assert no `planning` rows remain before commit (catches the wave-4 #16 bug).
+2. **Pre-flight worker prompts with "anchor files" hints** — for non-trivial issues, orchestrator includes a list of 2-3 most-relevant existing files. Cuts plan-phase time.
+3. **Build/test config edits should require explicit acknowledgement** — currently soft warning; v4 could elevate to "bail with `config-change-needed: <reason>`" if the worker tries to modify them.
+4. **Token-cost telemetry per issue** — orchestrator tracks per-worker token usage and writes to retro. Currently estimated post-hoc.
+
+## Follow-up items (post-M1)
+
+### Soft blockers from #22 smoke (file as M2 issues):
+1. **`feat(waves): require emitter on WaveSystem`** — make `emitter` a required constructor argument so callers can't accidentally drop lifecycle events.
+2. **`feat(building): tighten Building.cell to non-optional`** — eliminates the 4-line AI WallLike adapter.
+
+### Manual gate (human-required):
+3. **Manual playtest at 375px on iOS Safari + Android Chrome** — verify mobile UX, FPS at 100+ entities, full 5-wave run from a fresh boot. This is the hard prerequisite for "M1 fully shipped" beyond the conditional GO.
+
+### Code review items:
+4. **Audit `public/data/maps/m1-slice.json`** (#5) — keep or remove?
+5. **Plan doc bundling** — 23 plan docs now live in `docs/plans/`. Consider squashing into a single `docs/plans/M1-PLANS.md` post-milestone.
+6. **#18's `vitest.config.ts` + `tests/setup.ts` patches** — confirm intentional and stable.
+
+## Verdict
+
+**M1 ships, conditionally on the manual playtest passing.** The autonomous parallel workflow worked. 23 issues, 9 waves, 0 blockers, 3 trivial conflicts, ~6 hours wall-clock, ~1.5M worker tokens. The orchestration pattern + worker prompts + structural-typing discipline produced a coherent integrated codebase. The smoke test passed on first wiring pass — the strongest possible signal that the workers built compatible pieces.
+
+Now: a real human plays the game at 375px, watches the FPS, and either signs off the conditional GO or files real blockers.
