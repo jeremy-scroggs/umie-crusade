@@ -41,7 +41,17 @@ export type {
   RespawnSuccess,
   RespawnFailure,
 } from './Economy';
-export { AISystem, HumanState, OrcState, GukkaState } from './AI';
+export {
+  AISystem,
+  HumanState,
+  OrcState,
+  GukkaState,
+  OrderTag,
+  RANGERS_RANGE_TILES_DEFAULT,
+  ESCORT_WOUNDED_RATIO_DEFAULT,
+  ESCORT_RADIUS_TILES_DEFAULT,
+  RETREAT_THRESHOLD_RATIO_DEFAULT,
+} from './AI';
 export type {
   AISystemOptions,
   HumanInstance,
@@ -55,6 +65,7 @@ export type {
   GukkaStateName,
   GukkaStoreLike,
   GukkaBuildingSystem,
+  OrderTagValue,
 } from './AI';
 export { BuildingSystem } from './Building';
 export type {

@@ -21,13 +21,23 @@ import { SimpleEventEmitter } from '@/game/components';
 import grunt from '@/data/orcs/grunt.json';
 import gukkaJson from '@/data/orcs/gukka.json';
 import peasantLevy from '@/data/humans/peasant-levy.json';
+import orderOfHonor from '@/data/humans/order-of-honor.json';
+import rangersOfJustice from '@/data/humans/rangers-of-justice.json';
+import knightsOfValor from '@/data/humans/knights-of-valor.json';
+import paladinsOfCompassion from '@/data/humans/paladins-of-compassion.json';
 import wallWood from '@/data/buildings/wall-wood.json';
+import gateJson from '@/data/buildings/gate.json';
 import type { UnitDef, BuildingDef, WallDef } from '@/types';
 
 const orcDef = grunt as UnitDef;
 const gukkaDef = gukkaJson as UnitDef;
 const humanDef = peasantLevy as UnitDef;
+const orderDef = orderOfHonor as UnitDef;
+const rangerDef = rangersOfJustice as UnitDef;
+const knightDef = knightsOfValor as UnitDef;
+const paladinDef = paladinsOfCompassion as UnitDef;
 const wallDef = wallWood as BuildingDef;
+const gateDef = gateJson as BuildingDef;
 
 /** 1D corridor: width cells wide, 1 tall, all walkable. */
 function corridor(width: number): TiledMapLike {
@@ -579,5 +589,250 @@ describe('AISystem — Gukka auto-repair', () => {
     expect(() =>
       ai.registerGukka({ entity: fighter, cell: { x: 0, y: 0 } }),
     ).toThrow(/builder/);
+  });
+});
+
+describe('AISystem — Order behavior hooks (#67)', () => {
+  it('Order of Honor: prefers an adjacent gate over the flanking wall (AC)', async () => {
+    // 5x2 grid; flanking wall directly in front at (2,0) and a gate
+    // diagonally adjacent at (2,1). The Order-of-Honor hook must pick
+    // the gate via its Chebyshev-1 scan.
+    const map: TiledMapLike = {
+      width: 5,
+      height: 2,
+      tilewidth: 32,
+      tileheight: 32,
+      layers: [
+        {
+          type: 'tilelayer',
+          name: 'ground',
+          width: 5,
+          height: 2,
+          data: Array<number>(10).fill(1),
+        },
+      ],
+    };
+    const emitter = new SimpleEventEmitter();
+    const pf = new Pathfinding(map, emitter);
+    const damage = new DamageSystem({ emitter });
+
+    const wallCell = { x: 2, y: 0 };
+    const gateCell = { x: 2, y: 1 };
+    const wall = Building.fromDef(wallDef as WallDef, undefined, wallCell);
+    const gate = Building.fromDef(gateDef, undefined, gateCell);
+    const buildings = new Map<string, Building>();
+    buildings.set(`${wallCell.x},${wallCell.y}`, wall);
+    buildings.set(`${gateCell.x},${gateCell.y}`, gate);
+
+    const ai = new AISystem({
+      pathfinding: pf,
+      damage,
+      rally: { x: 0, y: 0 },
+      fortGoal: { x: 4, y: 0 },
+      pathEmitter: emitter,
+      secondsPerMeleeAttack: 0.1,
+      wallAt: (x, y) => buildings.get(`${x},${y}`) ?? null,
+    });
+
+    const human = Human.fromDef(orderDef);
+    ai.registerHuman({ entity: human, cell: { x: 0, y: 0 } });
+
+    // Tick once to issue the path request; let it resolve before the
+    // walls go up so the cached path runs through (2,0).
+    ai.update(1 / 60);
+    await flush();
+
+    // Mark both occupied cells impassable. (2,0) blocks the cached
+    // path; (2,1) blocks the only south-row detour.
+    emitter.emit(GameEvents.WallBuilt, wallCell);
+    emitter.emit(GameEvents.WallBuilt, gateCell);
+
+    // Drive the human forward. When it reaches (1,0) and sees (2,0)
+    // blocked, the gate-charge override must steer to the gate.
+    for (let i = 0; i < 200; i += 1) {
+      ai.update(0.1);
+      await flush();
+      if (ai.humanBehavior(human)!.state === HumanState.AttackWall) break;
+    }
+    const hb = ai.humanBehavior(human)!;
+    expect(hb.state).toBe(HumanState.AttackWall);
+    expect(hb.targetWall).toBe(gate);
+  });
+
+  it('Rangers of Justice: halts at archery range (AC)', async () => {
+    const map = corridor(10);
+    const emitter = new SimpleEventEmitter();
+    const pf = new Pathfinding(map, emitter);
+    const damage = new DamageSystem({ emitter });
+    const archeryRangeTiles = 3;
+    const ai = new AISystem({
+      pathfinding: pf,
+      damage,
+      rally: { x: 0, y: 0 },
+      fortGoal: { x: 9, y: 0 },
+      pathEmitter: emitter,
+      archeryRangeTiles,
+    });
+
+    const ranger = Human.fromDef(rangerDef);
+    ai.registerHuman({ entity: ranger, cell: { x: 0, y: 0 } });
+
+    // Drive ticks long enough for a non-Order human to easily reach
+    // the goal; the ranger must instead halt 3 tiles short.
+    for (let i = 0; i < 400; i += 1) {
+      ai.update(0.1);
+      await flush();
+      const hb = ai.humanBehavior(ranger)!;
+      const dist = Math.max(Math.abs(hb.cell.x - 9), Math.abs(hb.cell.y - 0));
+      if (dist <= archeryRangeTiles) break;
+    }
+
+    const hb = ai.humanBehavior(ranger)!;
+    const distance = Math.max(Math.abs(hb.cell.x - 9), Math.abs(hb.cell.y - 0));
+    expect(distance).toBeLessThanOrEqual(archeryRangeTiles);
+    // Hook short-circuits the step path on every tick — the ranger
+    // must hold position even after many more ticks.
+    const stoppedCell = { ...hb.cell };
+    for (let i = 0; i < 100; i += 1) {
+      ai.update(0.1);
+      await flush();
+    }
+    expect(ai.humanBehavior(ranger)!.cell).toEqual(stoppedCell);
+    // And the ranger stays inside archery range of the goal.
+    const finalDistance = Math.max(
+      Math.abs(ai.humanBehavior(ranger)!.cell.x - 9),
+      Math.abs(ai.humanBehavior(ranger)!.cell.y - 0),
+    );
+    expect(finalDistance).toBeLessThanOrEqual(archeryRangeTiles);
+  });
+
+  it('Rangers of Justice: a non-ranger marches all the way to the goal', async () => {
+    // Sanity counterpart: the same corridor + range value, but a
+    // peasant-levy (no `volley` tag) must not stop at range.
+    const map = corridor(10);
+    const emitter = new SimpleEventEmitter();
+    const pf = new Pathfinding(map, emitter);
+    const damage = new DamageSystem({ emitter });
+    const ai = new AISystem({
+      pathfinding: pf,
+      damage,
+      rally: { x: 0, y: 0 },
+      fortGoal: { x: 9, y: 0 },
+      pathEmitter: emitter,
+      archeryRangeTiles: 3,
+    });
+
+    const peasant = Human.fromDef(humanDef);
+    ai.registerHuman({ entity: peasant, cell: { x: 0, y: 0 } });
+
+    for (let i = 0; i < 800; i += 1) {
+      ai.update(0.1);
+      await flush();
+      if (ai.humanBehavior(peasant)!.cell.x === 9) break;
+    }
+    expect(ai.humanBehavior(peasant)!.cell).toEqual({ x: 9, y: 0 });
+  });
+
+  it('Knights of Valor: never retreat — HP threshold ignored (AC)', async () => {
+    const map = corridor(5);
+    const emitter = new SimpleEventEmitter();
+    const pf = new Pathfinding(map, emitter);
+    const damage = new DamageSystem({ emitter });
+    const ai = new AISystem({
+      pathfinding: pf,
+      damage,
+      rally: { x: 0, y: 0 },
+      fortGoal: { x: 4, y: 0 },
+      pathEmitter: emitter,
+      // Wire a non-zero retreat threshold so the gate is active.
+      retreatThresholdRatio: 0.5,
+    });
+
+    const knight = Human.fromDef(knightDef);
+    ai.registerHuman({ entity: knight, cell: { x: 0, y: 0 } });
+
+    // Slam the knight below the threshold (HP 90 → drop to ≤ 44).
+    knight.damageable.applyDamage(50);
+    expect(knight.damageable.hp / knight.damageable.maxHp).toBeLessThan(0.5);
+
+    ai.update(1 / 60);
+    await flush();
+
+    // Knight must NOT have retreated to IDLE — the `no-retreat` tag
+    // short-circuits the gate.
+    expect(ai.humanBehavior(knight)!.state).not.toBe(HumanState.Idle);
+  });
+
+  it('Knights of Valor: a peasant with the same HP ratio does retreat (sanity)', async () => {
+    const map = corridor(5);
+    const emitter = new SimpleEventEmitter();
+    const pf = new Pathfinding(map, emitter);
+    const damage = new DamageSystem({ emitter });
+    const ai = new AISystem({
+      pathfinding: pf,
+      damage,
+      rally: { x: 0, y: 0 },
+      fortGoal: { x: 4, y: 0 },
+      pathEmitter: emitter,
+      retreatThresholdRatio: 0.5,
+    });
+
+    const peasant = Human.fromDef(humanDef);
+    ai.registerHuman({ entity: peasant, cell: { x: 0, y: 0 } });
+    peasant.damageable.applyDamage(
+      Math.ceil(peasant.damageable.maxHp * 0.7),
+    );
+    expect(peasant.damageable.hp / peasant.damageable.maxHp).toBeLessThan(0.5);
+
+    ai.update(1 / 60);
+    await flush();
+    expect(ai.humanBehavior(peasant)!.state).toBe(HumanState.Idle);
+  });
+
+  it('Paladins of Compassion: escorts a wounded ally over advancing (AC)', async () => {
+    // 7-wide corridor; the paladin spawns at (0,0) and the fort goal
+    // is at (6,0). A wounded ally sits at (3,0). The paladin must
+    // walk toward the ally rather than continuing toward the fort.
+    const map = corridor(7);
+    const emitter = new SimpleEventEmitter();
+    const pf = new Pathfinding(map, emitter);
+    const damage = new DamageSystem({ emitter });
+    const ai = new AISystem({
+      pathfinding: pf,
+      damage,
+      rally: { x: 0, y: 0 },
+      fortGoal: { x: 6, y: 0 },
+      pathEmitter: emitter,
+      escortRadiusTiles: 6,
+      escortWoundedRatio: 0.6,
+    });
+
+    const paladin = Human.fromDef(paladinDef);
+    const ally = Human.fromDef(humanDef);
+    // Wound the ally — peasant-levy maxHp default; drop below 60%.
+    ally.damageable.applyDamage(
+      Math.ceil(ally.damageable.maxHp * 0.7),
+    );
+    expect(ally.damageable.hp / ally.damageable.maxHp).toBeLessThan(0.6);
+
+    ai.registerHuman({ entity: paladin, cell: { x: 0, y: 0 } });
+    ai.registerHuman({ entity: ally, cell: { x: 3, y: 0 } });
+
+    // Drive a few ticks. Paladin's speed = 65 → ~0.49 s/tile.
+    for (let i = 0; i < 40; i += 1) {
+      ai.update(0.1);
+      await flush();
+      if (
+        Math.max(
+          Math.abs(ai.humanBehavior(paladin)!.cell.x - 3),
+          Math.abs(ai.humanBehavior(paladin)!.cell.y - 0),
+        ) <= 1
+      )
+        break;
+    }
+    const hb = ai.humanBehavior(paladin)!;
+    // Paladin reached / is adjacent to the ally cell — proves the
+    // escort hook steered toward the wounded ally rather than past it.
+    expect(Math.abs(hb.cell.x - 3)).toBeLessThanOrEqual(1);
   });
 });

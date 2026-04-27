@@ -68,6 +68,55 @@ export const GukkaState = {
 } as const;
 export type GukkaStateName = (typeof GukkaState)[keyof typeof GukkaState];
 
+/**
+ * Per-order behavior tags (#67). The four Crusade orders carry their
+ * tag in `UnitDef.abilities[]` (the schema has no dedicated `behavior`
+ * field — D5/D6 chose `abilities[]` as the carrier). Each tag triggers
+ * exactly one small mutation in the existing human tick path; no new
+ * FSMs.
+ */
+export const OrderTag = {
+  /** Order of Honor — bias target priority toward gates over flanks. */
+  GateCharge: 'gate-charge',
+  /** Rangers of Justice — stop advancing once inside archery range. */
+  Volley: 'volley',
+  /** Knights of Valor — never retreat (HP threshold ignored). */
+  NoRetreat: 'no-retreat',
+  /** Paladins of Compassion — prefer escorting wounded allies. */
+  EscortWounded: 'escort-wounded',
+} as const;
+export type OrderTagValue = (typeof OrderTag)[keyof typeof OrderTag];
+
+/**
+ * Default archery range (in tiles) for `OrderTag.Volley` units. The
+ * unit schema does not yet carry a per-unit `range` stat, and the
+ * #67 bail rule forbids editing the human JSON. Callers can override
+ * via `AISystemOptions.archeryRangeTiles`. A future schema update
+ * (out-of-scope for #67) will move this onto `UnitDef.stats`.
+ */
+export const RANGERS_RANGE_TILES_DEFAULT = 5;
+
+/**
+ * Default escort-wounded HP ratio: a paladin treats any ally below
+ * this fraction of max HP as "wounded" and prioritises escorting
+ * them. Overridable via `AISystemOptions.escortWoundedRatio`.
+ */
+export const ESCORT_WOUNDED_RATIO_DEFAULT = 0.6;
+
+/**
+ * Default escort radius (in tiles) — paladins only consider wounded
+ * allies inside this Chebyshev distance.
+ */
+export const ESCORT_RADIUS_TILES_DEFAULT = 6;
+
+/**
+ * Default retreat HP ratio. Set to `0` so non-knight humans never
+ * retreat unless the scene wires a positive value in
+ * `AISystemOptions.retreatThresholdRatio`. Knights short-circuit the
+ * gate via `OrderTag.NoRetreat` regardless.
+ */
+export const RETREAT_THRESHOLD_RATIO_DEFAULT = 0;
+
 /** A Human entity with an associated world cell (supplied on register). */
 export interface HumanInstance {
   readonly entity: Human;
@@ -172,6 +221,35 @@ export interface AISystemOptions {
    * scene wires the real `BuildingSystem` here.
    */
   buildingSystem?: GukkaBuildingSystem;
+  /**
+   * Per-order hook tuning (#67) — Rangers of Justice (`volley`) halt
+   * advancing toward `fortGoal` once inside this Chebyshev distance.
+   * Defaults to `RANGERS_RANGE_TILES_DEFAULT`. Encoded as a ctor knob
+   * because the unit schema does not (yet) carry a per-unit `range`
+   * stat and the issue bail rule forbids editing the human JSON.
+   */
+  archeryRangeTiles?: number;
+  /**
+   * Generic retreat HP ratio (#67). When > 0, non-Knight humans whose
+   * `hp / maxHp` drops below this fraction transition to `Idle` and
+   * drop their current target. Knights of Valor (`no-retreat`) ignore
+   * the threshold entirely. Default `RETREAT_THRESHOLD_RATIO_DEFAULT`
+   * (zero — disabled). Sceens / waves can wire a positive value once
+   * retreat tuning lands.
+   */
+  retreatThresholdRatio?: number;
+  /**
+   * Per-order hook (#67) — Paladins (`escort-wounded`) treat allies
+   * below this HP fraction as "wounded" and prefer escorting them
+   * over advancing. Default `ESCORT_WOUNDED_RATIO_DEFAULT`.
+   */
+  escortWoundedRatio?: number;
+  /**
+   * Per-order hook (#67) — Paladins only escort wounded allies inside
+   * this Chebyshev distance (in tiles). Default
+   * `ESCORT_RADIUS_TILES_DEFAULT`.
+   */
+  escortRadiusTiles?: number;
 }
 
 /** Internal per-human state record. */
@@ -279,6 +357,10 @@ export class AISystem {
   readonly secondsPerMeleeAttack: number;
   readonly meleeRangeTiles: number;
   readonly pxPerCell: number;
+  readonly archeryRangeTiles: number;
+  readonly retreatThresholdRatio: number;
+  readonly escortWoundedRatio: number;
+  readonly escortRadiusTiles: number;
 
   private readonly pathfinding: Pathfinding;
   private readonly damage: DamageSystem;
@@ -333,6 +415,11 @@ export class AISystem {
     this.aggroRadius = opts.aggroRadius ?? 6 * this.pxPerCell;
     this.secondsPerMeleeAttack = opts.secondsPerMeleeAttack ?? 1;
     this.meleeRangeTiles = opts.meleeRangeTiles ?? 1;
+    this.archeryRangeTiles = opts.archeryRangeTiles ?? RANGERS_RANGE_TILES_DEFAULT;
+    this.retreatThresholdRatio =
+      opts.retreatThresholdRatio ?? RETREAT_THRESHOLD_RATIO_DEFAULT;
+    this.escortWoundedRatio = opts.escortWoundedRatio ?? ESCORT_WOUNDED_RATIO_DEFAULT;
+    this.escortRadiusTiles = opts.escortRadiusTiles ?? ESCORT_RADIUS_TILES_DEFAULT;
     this.emitter = opts.emitter ?? new SimpleEventEmitter();
     this.pathEmitter = opts.pathEmitter ?? this.emitter;
     this.wallAt = opts.wallAt ?? (() => null);
@@ -519,6 +606,17 @@ export class AISystem {
       }
     }
 
+    // Per-order retreat hook (#67). Generic threshold is checked first;
+    // Knights of Valor (`no-retreat`) short-circuit it. Disabled in
+    // production by default (`retreatThresholdRatio` defaults to 0).
+    if (this.shouldRetreat(h)) {
+      h.state = HumanState.Idle;
+      h.targetWall = null;
+      h.targetOrc = null;
+      h.path = null;
+      return;
+    }
+
     switch (h.state) {
       case HumanState.Idle:
         this.humanBeginPath(h);
@@ -578,6 +676,19 @@ export class AISystem {
       return;
     }
 
+    // Per-order hook (#67) — Rangers of Justice halt at archery range.
+    // Once inside range, the ranger drops its forward path so the
+    // next-step block below short-circuits to "no further movement".
+    if (this.rangersHalt(h)) {
+      return;
+    }
+
+    // Per-order hook (#67) — Paladins step toward a wounded ally
+    // instead of the fort goal when one is in range.
+    if (this.escortStep(h)) {
+      return;
+    }
+
     if (!h.path) {
       // No path cached — kick off a request. We stay in PATHING; the async
       // request will set `path` when it resolves.
@@ -608,6 +719,15 @@ export class AISystem {
     // If the next cell is blocked (e.g. a wall went up since we pathed),
     // switch to ATTACK_WALL if we can find one, else re-path.
     if (!this.pathfinding.isWalkable(next.x, next.y)) {
+      // Per-order hook (#67) — Order of Honor biases its target priority
+      // toward a Chebyshev-1 gate, when one exists, in preference to the
+      // direct next-cell wall.
+      const preferredGate = this.gateChargeOverride(h);
+      if (preferredGate) {
+        h.targetWall = preferredGate;
+        h.state = HumanState.AttackWall;
+        return;
+      }
       const wall = this.wallAt(next.x, next.y);
       if (wall && !wall.breakable.damageable.dead) {
         h.targetWall = wall;
@@ -707,6 +827,110 @@ export class AISystem {
       if (c.x === h.cell.x && c.y === h.cell.y) return i + 1;
     }
     return path.length;
+  }
+
+  // ------------------------------------------------------------------
+  //                Per-order behavior hooks (#67)
+  // ------------------------------------------------------------------
+
+  /** Tag-presence helper. Reads `def.abilities[]` (D5/D6 carrier). */
+  private hasOrderTag(h: HumanBehavior, tag: OrderTagValue): boolean {
+    const abilities = h.instance.entity.def.abilities;
+    return Array.isArray(abilities) && abilities.includes(tag);
+  }
+
+  /**
+   * Order of Honor (`gate-charge`) — when the human's next-step is
+   * blocked, scan Chebyshev-1 cells for a Building of category
+   * `'gate'` and prefer it as the attack target over the flanking
+   * wall directly in front. Returns the preferred gate Building, or
+   * `null` if none applies (non-Order, no adjacent gate, etc.).
+   */
+  private gateChargeOverride(h: HumanBehavior): Building | null {
+    if (!this.hasOrderTag(h, OrderTag.GateCharge)) return null;
+    for (let dy = -1; dy <= 1; dy += 1) {
+      for (let dx = -1; dx <= 1; dx += 1) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = h.cell.x + dx;
+        const ny = h.cell.y + dy;
+        const candidate = this.wallAt(nx, ny);
+        if (!candidate || candidate.breakable.damageable.dead) continue;
+        if (candidate.def.category === 'gate') return candidate;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Rangers of Justice (`volley`) — once the ranger is inside its
+   * archery range of the fort goal, halt forward motion. The ranger
+   * stops stepping further toward the fort while staying in `Pathing`
+   * so the existing `findEngagingOrc` upstream check still pulls it
+   * into ATTACK_ORC when an orc closes. Returns `true` when the hook
+   * fired (caller should early-return without stepping).
+   */
+  private rangersHalt(h: HumanBehavior): boolean {
+    if (!this.hasOrderTag(h, OrderTag.Volley)) return false;
+    if (chebyshev(h.cell, this.fortGoal) > this.archeryRangeTiles) return false;
+    return true;
+  }
+
+  /**
+   * Paladins of Compassion (`escort-wounded`) — when a wounded ally
+   * is within `escortRadiusTiles`, step toward that ally instead of
+   * advancing along the fort path. Reuses `stepToward` so movement
+   * cadence matches the rest of the AI. Returns `true` when the hook
+   * fired (caller should early-return).
+   */
+  private escortStep(h: HumanBehavior): boolean {
+    if (!this.hasOrderTag(h, OrderTag.EscortWounded)) return false;
+    const ally = this.findWoundedAlly(h);
+    if (!ally) return false;
+    // Already adjacent — escort holds station; the existing combat
+    // path handles engaged orcs upstream.
+    if (chebyshev(h.cell, ally.cell) <= this.meleeRangeTiles) return true;
+    if (h.stepCooldown > 0) return true;
+    this.stepToward(h, ally.cell, h.instance.entity.def);
+    return true;
+  }
+
+  /**
+   * Find the closest wounded ally human (excluding the paladin
+   * itself). "Wounded" means `hp / maxHp < escortWoundedRatio`.
+   * Returns `null` when no ally qualifies inside `escortRadiusTiles`.
+   */
+  private findWoundedAlly(h: HumanBehavior): HumanBehavior | null {
+    let best: HumanBehavior | null = null;
+    let bestD = Number.POSITIVE_INFINITY;
+    for (const other of this.humansProvider()) {
+      if (other === h) continue;
+      if (other.instance.entity.damageable.dead) continue;
+      const dmg = other.instance.entity.damageable;
+      const ratio = dmg.maxHp > 0 ? dmg.hp / dmg.maxHp : 1;
+      if (ratio >= this.escortWoundedRatio) continue;
+      const d = chebyshev(h.cell, other.cell);
+      if (d > this.escortRadiusTiles) continue;
+      if (d < bestD) {
+        best = other;
+        bestD = d;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Knights of Valor (`no-retreat`) short-circuit the generic retreat
+   * gate. When `retreatThresholdRatio` is positive AND the human is
+   * not a Knight AND HP is below the threshold, the human retreats
+   * (drops to IDLE). Returns `true` when the human should retreat
+   * this tick.
+   */
+  private shouldRetreat(h: HumanBehavior): boolean {
+    if (this.retreatThresholdRatio <= 0) return false;
+    if (this.hasOrderTag(h, OrderTag.NoRetreat)) return false;
+    const dmg = h.instance.entity.damageable;
+    if (dmg.maxHp <= 0) return false;
+    return dmg.hp / dmg.maxHp < this.retreatThresholdRatio;
   }
 
   // ------------------------------------------------------------------

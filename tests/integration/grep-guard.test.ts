@@ -64,11 +64,19 @@ const SYSTEMS_DIR = resolve(__dirname, '../../src/game/systems');
  */
 const ALLOWLISTS: Readonly<Record<string, FileAllowlist>> = {
   'AI.ts': {
-    numerics: new Set(['6', '1000']),
+    numerics: new Set(['5', '6', '1000']),
     rationale: {
+      '5':
+        'Default Rangers-of-Justice archery range in tiles (#67). The ' +
+        'unit schema does not yet carry a per-unit `range` stat, and the ' +
+        '#67 bail rule forbids editing the human JSON. Structural ' +
+        'placeholder — every real run overrides via ' +
+        '`AISystemOptions.archeryRangeTiles`. A future schema update will ' +
+        'move this onto `UnitDef.stats` and remove this entry.',
       '6':
-        'Default aggro radius in tiles for the Orc FSM (multiplied by ' +
-        'pxPerCell). Structural — every real run overrides via ctor opts.',
+        'Default aggro radius in tiles for the Orc FSM and default ' +
+        'Paladin escort radius for the `escort-wounded` hook (#67). ' +
+        'Structural — every real run overrides via ctor opts.',
       '1000':
         'Milliseconds-per-second unit conversion for the Gukka repair ' +
         'cooldown (`def.repairCooldownMs / 1000` → seconds). Structural ' +
