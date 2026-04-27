@@ -1,0 +1,23 @@
+{
+  "id": "mojoka-hero",
+  "name": "Mojoka",
+  "category": "caster",
+  "faction": "orc",
+  "stats": { "hp": 65, "dps": 7, "speed": 55, "armor": 1 },
+  "cost": { "gold": 140, "trainTime": 12 },
+  "respawnCost": { "gold": 75, "time": 30 },
+  "sprite": "orcs/mojoka-hero.png",
+  "animations": ["idle", "walk", "attack", "ability", "death"],
+  "abilities": ["wargh-totem"],
+  "unlockRequirement": null,
+  "flavor": "Tra plak'sh, umie blud.",
+  "kind": "mojoka",
+  "role": "caster",
+  "ability": {
+    "id": "wargh-totem",
+    "damage": 18,
+    "radius": 96,
+    "stunMs": 1000,
+    "cooldownMs": 15000
+  }
+}
