@@ -14,7 +14,7 @@
 | License | **MIT** |
 | UI paradigm | **Atomic design** for the React UI overlay. Game entities use composition inside Phaser. |
 | Tile size | **Deferred** — prototype at 32×32, lock by end of M1. Code is tile-size-agnostic. |
-| Hero system | **Player-picked bloodline + custom name** at run start. Every player gets their own orc. |
+| Hero system | **Player-picked unit kind + custom name** at run start. Every player gets their own orc. |
 | Unclaimed Urucku (Aughhagh, Gagru) | **Unlock at wave milestones in-game**, independent of UO world |
 | Orc death | **Respawn at Barracks with gold cost** |
 | Walls | **Take damage; gold-cost repair.** Drives the Gukka builder role. |
@@ -29,12 +29,12 @@
 
 A web-based, mobile-responsive, top-down pixel-art base/tower defense hybrid. The player commands a small band of Bloodrock orcs who have **fallen through a portal** into a strange human kingdom whose zealots are hunting them to extinction. Build walls and towers, train defenders, unlock the **Nine Urucku** (the orcish virtues) for permanent meta-progression, and survive as long as possible against the never-ending **Umie Crusade**.
 
-Thematically the game draws directly on the Bloodrock Clan canon — its gods, language, virtues, bloodlines, and characters — all of which are the player-author's own creations. See §4 for the lore pack.
+Thematically the game draws directly on the Bloodrock Clan canon — its gods, language, virtues, units, and characters — all of which are the player-author's own creations. See [docs/LORE.md](LORE.md) for the game-focused distillation and [docs/war-tome.md](war-tome.md) for the full canon.
 
 **Core loop:** Survive wave → loot & gather → build/upgrade/train → reposition → next wave.
 
 **Framing narrative (flavor only — not required to follow):**
-A Mojoka ritual to Krull'nuk went sideways. A green-tinged portal split the air. A handful of orcs — whoever the player picks — stumbled through it and woke in an unknown land. The locals don't speak orcish. They don't parley. They ride in banners of white and gold, call the orcs *demons*, and come in waves that never seem to end. The orcs dig in. They build. They remember the creed: *Nub goth. Nub pulga. Hedk'nah.* The pile will grow.
+Smugglers Den, present day. Klerggoth Zut'lug holds the stone. A Mojoka rite to Krull'nuk goes sideways. A green-tinged portal splits the air. A handful of orcs — whoever the player picks — stumble through it and wake in an unknown land. The locals don't speak orcish. They don't parley. They ride in banners of white and gold, call the orcs *demons*, and come in waves that never seem to end. The orcs dig in. They build. They remember the creed: *Nub goth. Nub pulga. Hedk'nah.* The pile will grow.
 
 ---
 
@@ -76,107 +76,47 @@ Reference feel: **Orcs Must Die!** meets **Dungeon Warfare** meets **Kingdom Rus
 
 ---
 
-## 4. Lore Pack (canonical — use directly)
+## 4. Lore Pack
 
 All Bloodrock material belongs to the player-author. The **Umie Crusade** faction is original to this game (not UO IP).
 
-### 4.1 The Tra — the three orc gods
+The full lore lives in two documents:
 
-| God | Sphere | Domain |
-|---|---|---|
-| **Krull'nuk** | 🟢 Green | Magic, chaos, guile — the portal god |
-| **Krenbluk** | 🔴 Red | Blood, fury, destruction |
-| **Belok** | ⚫ Black | Souls, the taken dead |
+- **[docs/LORE.md](LORE.md)** — game-focused distillation (Tra, Duhkta, units, Urucku, Umie Orders, glossary, battle cries). This is what the implementation reads against.
+- **[docs/war-tome.md](war-tome.md)** — the full canonical *Klerg-Tome*. Where the two disagree, the war-tome wins.
 
-**Prayer to the Tra:** *"Krull'nuk, gib mojo! Krenbluk, gib blud! Belok, uk z'haa'l'a umies!"*
+### 4.1 Highlights for the implementation
 
-### 4.2 The Nine Urucku — orcish virtues (meta-progression tree)
+- **The Tra** (Krull'nuk / Krenbluk / Belok): three orc gods, feared not loved. Mojoka are their avatars in the hai.
+- **The Duhkta** (Clog / Faugh / Snarf): three principles beneath the Nine Urucku — flavor only, not a system.
+- **Nine Urucku**: meta-progression. Each virtue grants a passive modifier and unlocks one unit kind, building, or tactical option. Aughhagh / Gagru / Highat are wave-gated (25 / 50 / 75).
+- **Unit roster**: 11 core kinds of orc (Snotling, Peon, Gukka, Grunt, Skowt, Brute, Howl'r, Kaptain, Klerggoth, Wierdling, Mojoka) plus 2 optional (Reaver, Elder). No bloodlines — the unit kind *is* the class.
+- **Hero system**: player picks a unit kind they've unlocked, names that orc, starts the run. One active hero at a time (Kingdom Rush pattern), more powerful than a line unit, with a kind-specific active ability. Heroes persist in a Hero Roster across runs.
+- **Hedk'nah Pile**: persistent skull counter, cosmetic milestones only.
+- **IP carve-outs**: no Britannian virtue mapping, no UO place names, no Shadowlord names. The Urucku stand on their own.
 
-Each virtue offers a permanent modifier + unlocks one unit/building.
-
-| # | Urucku | Meaning | Founder (lore) | Bloodline | Unlock |
-|---|---|---|---|---|---|
-| 1 | **Ogba** | Brutality | Ur'Runklug | Mougg'r (mace) | Scar-point spend |
-| 2 | **Iggju** | Fighting Tactics | K'tar | Thu'gub'r (spear) | Scar-point spend |
-| 3 | **Kihagh** | Bloodlust | Zhud'uuk | Ggrultuk'r (axe) | Scar-point spend |
-| 4 | **Rokgagh** | Deceptive Tactics | Wug'uk | Geeptiis'r (sword) | Scar-point spend |
-| 5 | **Ghigneh** | Wargod Connection | Tu'grrt | Mojoka (mages) | Scar-point spend |
-| 6 | **Buorca** | Teamwork / Selflessness | Chok'ka | Gukka (crafters) | Scar-point spend |
-| 7 | **Aughhagh** | Deceit | — | — | **Wave 25 reached** |
-| 8 | **Gagru** | Deceptive Might | — | — | **Wave 50 reached** |
-| 9 | **Highat** | Sneakiness | (secret) | Sneek-R (stealth) | **Wave 75 reached, hidden ritual** |
-
-**Scars:** players earn scar points per run, scaled by wave reached, skulls taken, and style challenges. Spend scars to light up Urucku nodes. Mirrors the clan's real-world scar economy (rituals = 2, tasks = 1).
-
-**IP note:** the clan's canon frames Urucku as "corruptions of" Britannian virtues. That mapping is dropped for the public repo. The Urucku stand on their own.
-
-### 4.3 Hero system — player-picked, player-named
-
-At the start of every new run, the player sees a hero-creation screen:
-
-1. **Pick a bloodline** (orc class) from the roster they've unlocked
-2. **Enter a name** for this orc (persists to meta-save; reusable across runs)
-3. **Begin the run**
-
-The hero is the player's own avatar in the field — one active at a time (Kingdom Rush pattern), more powerful than a line orc, with a bloodline-specific active ability. Heroes persist in a **Hero Roster** — players can keep a stable of named orcs and pick a different one each run.
-
-| Bloodline | Hero role | Active ability (working) |
-|---|---|---|
-| Mougg'r | Tank / Stun | **Clomp'uk** — slam attack, AoE stun in a short radius |
-| Thu'gub'r | Reach melee | **Kigg Throw** — hurl a spear that pierces a line of enemies |
-| Ggrultuk'r | Berserker | **Kihagh Rage** — 10s of 2× attack speed, takes 50% more damage |
-| Geeptiis'r | Skirmisher | **Rokgagh Strike** — teleport behind the lowest-HP target and crit |
-| Mojoka | Caster | **Tra Spheres** — AoE that deals magic / blood / soul damage in sequence |
-| Gukka | Builder-warrior | **Doomforge** — instantly repair all walls in a radius, damage adjacent enemies |
-| Sneek-R | Assassin (locked by Highat) | **Ru'eeg'a** — become invisible, next attack is a guaranteed crit |
-
-**Tu'grrt** (the player-author's own orc) is not baked into the game as "the hero." He's an example preset players can pick, and the first "tutorial hero" shown on the creation screen as a suggested starter — but any player will name their own Mojoka whatever they want.
-
-**M1 scope note:** M1 ships with **one bloodline + one default hero** (Mougg'r grunt — the roster expands at M2/M3). The hero-creation UI scaffold can still land in M1 with a single option.
-
-### 4.4 Bloodrock orcish (UI and combat flavor)
-
-| Orcish | English |
-|---|---|
-| umies | humans |
-| klerg | war, battle |
-| clomp | destroy, smash |
-| blud | blood |
-| hedk'nah | skull(s) |
-| mojo | magic |
-| gug / guk | good / is good |
-| nub | no, nothing |
-| jat | now |
-| uk | take |
-| gib | give |
-| shu'uk | gather |
-| bludgelt | loot |
-| bludchok-hai | Bloodrock Clan |
-
-**Battle cries:**
-- *"Bludchok-hai gug!"* — Bloodrock Clan is good! (title / victory)
-- *"ISE HAI!"* — clan cry (wave-start)
-- *"KWAT DA TRA!"* — three-gods invocation (boss / hero ability)
-- *"Hedk'nah gug."* — "The skull is good" (kill confirmation flavor)
-
-### 4.5 Hedk'nah — scoring/prestige layer
-
-Former war chiefs who count their worth in heads. In-game: skulls taken in every run feed **The Pile**, a persistent meta-counter. Cosmetic milestones only (no balance impact — keeps it honest). Creed: *"Nub goth. Nub pulga. Hedk'nah."*
-
-### 4.6 The Umie Crusade — human faction (game-original)
+### 4.2 The Umie Crusade — human faction (game-original)
 
 A religious military order of a human kingdom that views the portal-orcs as demons summoned from hell. Banners: white and gold. Tone: fanatical, organized, increasingly desperate. Leader names invented per boss wave — never reused from UO/Britannia.
 
-| Unit | Role |
-|---|---|
-| Peasant Levy | Fodder, fast, low HP |
-| Militia | Shielded, medium HP |
-| Crossbowman | Ranged, fragile — priority target |
-| Knight | Armored, slow, high HP |
-| Priest | Heals others — kill first |
-| Inquisitor | Anti-magic, silences Mojoka auras |
-| Siege Ram | Breaches walls — must intercept early |
-| Grand Paladin (boss, every 10 waves) | High HP, physical resist, named |
+The Crusade musters in **eight orders**, each tied to one of the umies' soft virtues. Each order behaves true to its virtue — and that is also its weakness, for an orc who knows his Urucku knows where to strike.
+
+| Order | Virtue | Behavior in battle |
+|---|---|---|
+| **Order of Honor** | Honor | Charges the front gate; refuses traps and ambush |
+| **Rangers of Justice** | Justice | Open-field rank-and-file archery |
+| **Paladins of Compassion** | Compassion | Will not leave their wounded; healers in train |
+| **Mage Tower** | Spirituality | Slow advance; long, interruptible rites |
+| **Knights of Valor** | Valor | Charge until they die; high HP, no retreat |
+| **Inquisitors of Honesty** | Honesty | Anti-magic, deceptive — silence Mojoka |
+| **Disciples of Sacrifice** | Sacrifice | Spend their own bodies to wound the hai |
+| **Monks of Humility** | Humility | No armor; unarmed melee swarm |
+
+Plus, outside the orders:
+
+- **Peasant Levy** — fodder, no order, low HP
+- **Siege Ram** — siege equipment, breaches walls
+- **Grand Paladin** — boss every 10 waves, named per encounter, leads one of the orders
 
 ---
 
@@ -205,12 +145,12 @@ umie-crusade/
 │   │   ├── metaStore.ts         # Urucku unlocks, Hedk'nah pile, hero roster, settings
 │   │   └── bridge.ts            # Phaser ↔ React sync helpers
 │   ├── data/                    # ALL balance data — never hardcode
-│   │   ├── orcs/                # mougg-grunt.json, mojoka-base.json, ...
+│   │   ├── orcs/                # grunt.json, brute.json, skowt.json, mojoka.json, ...
 │   │   ├── buildings/           # wall-wood.json, wall-stone.json, ballista.json, ...
 │   │   ├── humans/              # peasant-levy.json, knight.json, grand-paladin.json, ...
 │   │   ├── waves/               # generator configs + named set-pieces
 │   │   ├── urucku/              # 9 virtue nodes (modifiers + unlocks)
-│   │   ├── heroes/              # hero-ability definitions per bloodline
+│   │   ├── heroes/              # hero-ability definitions per unit kind
 │   │   ├── maps/                # Tiled JSON exports
 │   │   └── strings/             # en.json (i18n-ready)
 │   ├── lib/                     # Pure utilities (math, rng, formulas)
@@ -246,21 +186,22 @@ Game-internal events (projectile collisions, AI transitions) stay inside Phaser.
 
 Every balance number lives in `/src/data/`. Systems read definitions at runtime. Adding a new orc type = drop a JSON file + sprite sheet + register the id. Schemas validated on boot with Zod in dev mode; validator runs in CI.
 
-**Example `mougg-grunt.json`:**
+**Example `grunt.json` (target shape — see follow-up rename issue for current state):**
 ```json
 {
-  "id": "mougg-grunt",
+  "id": "grunt",
   "name": "Scrag",
-  "bloodline": "mougg-r",
+  "kind": "grunt",
   "category": "melee",
+  "faction": "orc",
   "stats": { "hp": 80, "dps": 12, "speed": 60, "armor": 2 },
-  "cost": { "gold": 25, "food": 1, "trainTime": 4 },
-  "respawnCost": { "gold": 15, "time": 10 },
-  "sprite": "orcs/mougg-grunt.png",
+  "cost": { "bludgelt": 25, "trainTime": 4 },
+  "respawnCost": { "bludgelt": 15, "time": 10 },
+  "sprite": "orcs/grunt.png",
   "animations": ["idle", "walk", "attack", "death"],
   "abilities": ["stun"],
   "unlockRequirement": null,
-  "flavor": "Mougg klerg! Clomp jat!"
+  "flavor": "Nooograh! Clomp jat!"
 }
 ```
 
@@ -276,7 +217,14 @@ Every balance number lives in `/src/data/`. Systems read definitions at runtime.
 ## 6. Game Systems
 
 ### 6.1 Economy
-Two core resources: **gold** (from kills, used for training/respawn/building/repair) and **wood/stone** (gathered between waves by Gukka units, used for walls and towers). A rare **souls** currency unlocks with Ghigneh (powers Mojoka hero abilities). No fourth resource unless design demands.
+Two core resources, named in orcish in the UI:
+
+- **Bludgelt** (loot) — taken from umie kills; used for training, respawn, building, and repair. The truest measure of a hai's strength.
+- **Chok / R'hee** (stone / wood) — gathered between waves by Peons and Gukka, used for walls and towers.
+
+A rare **mojo plak** (reagent) currency unlocks with Ghigneh and powers Mojoka hero abilities. No fourth resource unless design demands.
+
+The full orcish resource lexicon (chok, r'hee, fless, bludgelt, mojo plak, lir'tyk, k'nabb'h, krenbluk'a cha) is in [docs/LORE.md](LORE.md). Most are flavor — only the four above are ever surfaced as gameplay-tracked resources.
 
 ### 6.2 Progression
 - **In-run tech tree:** gated by wave number and spend. Resets each run.
@@ -289,7 +237,7 @@ Two core resources: **gold** (from kills, used for training/respawn/building/rep
 Generator composes waves from **patterns** defined in JSON: `siege_push`, `priest_column`, `skirmish_harass`, `paladin_advance`. Composition curves, intensity multipliers, rarity rules drive output. Every 10th wave is a hand-authored boss wave with a named Grand Paladin.
 
 ### 6.4 Death, respawn, and repair
-- **Orc death:** unit returns to Barracks after a delay; gold cost to respawn (per §5.3 example, 15g / 10s for a grunt). Tune per bloodline.
+- **Orc death:** unit returns to Barracks after a delay; bludgelt cost to respawn (per §5.3 example, 15 bludgelt / 10s for a grunt). Tune per unit kind.
 - **Hero death:** longer delay, higher gold cost. Losing the hero is a significant setback but not run-ending.
 - **Wall damage:** walls have HP; humans attack them when pathing is blocked. Destroyed walls force a full A* recompute. Gukka builders auto-repair if gold is available and they're idle — manual override possible.
 
@@ -307,7 +255,7 @@ Grid logic is tile-size-agnostic. `TILE_SIZE` is one config value. Prototype wit
 ### 7.2 Art requests for minimum viable slice (M1 → M2)
 
 - 1 tileset — grass, dirt, stone path, forest, water, fort-core (one variant each + a few decorative tiles)
-- 3 orc sprites — Mougg'r grunt, Ggrultuk'r berserker, Mojoka (hero template) — 4 or 8 directions, animations: idle, walk, attack, death
+- 3 orc sprites — Grunt, Brute (hero template), Mojoka — 4 or 8 directions, animations: idle, walk, attack, death
 - 3 human sprites — Peasant Levy, Knight, Priest (same animations)
 - Wall (wood), wall (stone) — each with 3 damage states (pristine / cracked / crumbling), gate, watchtower, ballista (static or 2-frame firing)
 - 1 UI theme sheet — button, panel border, icon set for resources, pixel font
@@ -317,7 +265,7 @@ Grid logic is tile-size-agnostic. `TILE_SIZE` is one config value. Prototype wit
 - PNG with transparency, power-of-two atlas dimensions where feasible
 - **TexturePacker** (free tier) or `free-tex-packer-core` for atlases
 - **Tiled** for maps — artist delivers `.tmx`; Vite plugin imports JSON
-- Filename convention: **kebab-case** everywhere, namespaced (`orcs/mougg-grunt.png`)
+- Filename convention: **kebab-case** everywhere, namespaced (`orcs/grunt.png`, `orcs/brute.png`)
 
 ---
 
@@ -346,30 +294,30 @@ Per-feature application of the review → plan → execute → commit → valida
 - CI: typecheck, lint, test, data-validate
 - MIT license, README, LORE.md seeded from §4
 
-**M1 — Vertical slice**
-- One map, one orc bloodline (Mougg'r grunt + Mougg'r hero), one human (Peasant Levy), one wall type (wood), one tower (ballista)
-- **Hero-creation scaffold** — pick Mougg'r (only option), name your orc, begin run
+**M1 — Vertical slice (shipped)**
+- One map, one orc unit (Grunt) + one hero (Brute), one human (Peasant Levy), one wall type (wood), one tower (ballista)
+- **Hero-creation scaffold** — pick Brute (only option), name your orc, begin run
 - Humans spawn, path to fort core via `easystarjs`, orc defenders intercept, damage resolves
-- Gold drops from kills; place walls; dead orcs respawn for gold
+- Bludgelt drops from kills; place walls; dead orcs respawn for bludgelt
 - Walls take damage; manual repair (Gukka comes at M2)
 - 5 hand-authored waves, then "You Win" screen
 - Mobile playable (touch controls work)
 - **Go/no-go gate: if the slice isn't fun, stop and iterate before adding breadth.**
 
 **M2 — Breadth**
-- 3 orc bloodlines selectable (Mougg'r, Ggrultuk'r, Mojoka) — full hero-creation UI
-- 4–5 human types (Peasant, Militia, Crossbowman, Knight, Priest)
+- 3 orc hero unit kinds selectable (Brute, Mojoka, Skowt or Gukka) — full hero-creation UI
+- 4–5 human types from the eight Umie Orders (Peasant Levy, Order of Honor, Rangers of Justice, Knights of Valor, Paladins of Compassion)
 - 4–5 building types (wall-wood, wall-stone, gate, watchtower, ballista, spike trap)
-- Gukka builder unit with auto-repair
+- Gukka builder unit with auto-repair; Peon gatherer unit
 - Wave generator replaces hand-authored waves
-- localStorage meta save: highest wave, gold lifetime, Hedk'nah Pile, hero roster
+- localStorage meta save: highest wave, lifetime bludgelt, Hedk'nah Pile, hero roster
 - Pause, speed-up (1× / 2× / 4×)
 
 **M3 — Progression, identity, and audio**
 - Nine Urucku tree — 3 virtues fully unlockable (Ogba, Kihagh, Ghigneh), others scaffolded
 - Wave milestones trigger Aughhagh/Gagru/Highat unlocks
-- All 7 bloodlines selectable as heroes with their active abilities
-- Boss wave every 10 with named Grand Paladin
+- All 7 hero unit kinds (Brute, Skowt, Mojoka, Gukka, Howl'r, Kaptain, Klerggoth) selectable with their active abilities
+- Boss wave every 10 with named Grand Paladin from one of the eight orders
 - Bloodrock orcish UI strings (battle cries on wave start, flavor in tooltips)
 - Audio pass: ambient track, wave-start cry, weapon sounds, victory/defeat stings (CC0 sources)
 
@@ -386,7 +334,7 @@ Per-feature application of the review → plan → execute → commit → valida
 
 Most big decisions are locked. These get resolved in per-feature Plan phases:
 
-1. **Hero ability tuning** — the abilities in §4.3 are working names and effects. Each needs concrete numbers (damage, duration, cooldown) during the relevant milestone's Plan phase.
+1. **Hero ability tuning** — hero abilities per unit kind (Brute / Skowt / Mojoka / Gukka / Howl'r / Kaptain / Klerggoth) need concrete numbers (damage, duration, cooldown) during the relevant milestone's Plan phase. See [docs/LORE.md](LORE.md) for unit roster.
 2. **Portal intro** — cutscene, scrolling text, or flavor-only on title screen? Recommend flavor-only for M1, short scrolling text for M3.
 3. **Hero persistence depth** — do heroes accrue stats/scars across runs, or just names? Recommend names-only for MVP; re-evaluate after M3 playtests.
 4. **Grand Paladin names and visual differentiation** — needs a list of named bosses during M3 Plan phase.
