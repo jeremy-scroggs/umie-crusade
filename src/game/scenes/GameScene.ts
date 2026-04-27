@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { getGameStore } from '@/state/bridge';
-import { TILE_SIZE } from '@/lib/constants';
+import { TILE_SIZE } from '@/game/config/tile';
 
 export class GameScene extends Phaser.Scene {
   private map!: Phaser.Tilemaps.Tilemap;

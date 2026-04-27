@@ -13,7 +13,7 @@
 | Repository visibility | **Public** on GitHub |
 | License | **MIT** |
 | UI paradigm | **Atomic design** for the React UI overlay. Game entities use composition inside Phaser. |
-| Tile size | **Deferred** — prototype at 32×32, lock by end of M1. Code is tile-size-agnostic. |
+| Tile size | **Locked at 32 × 32 px** (end of M1, issue #23). Canonical constant: `src/game/config/tile.ts`. Rationale + revisit conditions: [docs/ARCHITECTURE.md](ARCHITECTURE.md#tile-size-lock). Code remains tile-size-agnostic. |
 | Hero system | **Player-picked unit kind + custom name** at run start. Every player gets their own orc. |
 | Unclaimed Urucku (Aughhagh, Gagru) | **Unlock at wave milestones in-game**, independent of UO world |
 | Orc death | **Respawn at Barracks with gold cost** |
@@ -248,9 +248,9 @@ One fort at center-east (cliff/coast to the east limits approach angles). Humans
 
 ## 7. Art Pipeline
 
-### 7.1 Tile size — the deferred decision
+### 7.1 Tile size — locked at 32 × 32 px
 
-Grid logic is tile-size-agnostic. `TILE_SIZE` is one config value. Prototype with **placeholder 32×32** art. Have the artist draw one "test tile + test orc" at each candidate size (16 and 32). Lock by end of M1. Code won't care.
+Grid logic is tile-size-agnostic. `TILE_SIZE` is one config value, now living at `src/game/config/tile.ts`. Locked at the end of M1 (issue #23) at **32 × 32 px** — matches the dominant indie pixel-art density, fits mobile GPU budgets at the 1280 × 720 virtual canvas, and aligns with what the artist is already delivering via Tiled. Full rationale and revisit conditions: [docs/ARCHITECTURE.md](ARCHITECTURE.md#tile-size-lock).
 
 ### 7.2 Art requests for minimum viable slice (M1 → M2)
 
