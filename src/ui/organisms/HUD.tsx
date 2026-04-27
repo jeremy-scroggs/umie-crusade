@@ -7,6 +7,7 @@ import { WaveBadge } from '@/ui/atoms/WaveBadge';
 import { SkullCounter } from '@/ui/atoms/SkullCounter';
 import { HeroStatus } from '@/ui/molecules/HeroStatus';
 import { AbilityButton } from '@/ui/molecules/AbilityButton';
+import { SpeedControl } from '@/ui/molecules/SpeedControl';
 import { tryHeroAbility } from '@/game/scenes/gameBridge';
 
 /**
@@ -57,6 +58,7 @@ export function HUD() {
         <WaveBadge label={t('hud.wave')} value={wave} />
         <SkullCounter ariaLabel={t('hud.skullsAria')} value={skulls} />
         <HeroStatus label={t('hud.heroHp')} hp={heroHp} maxHp={heroMaxHp} />
+        <SpeedControl />
       </div>
 
       <div className="absolute bottom-3 right-3 z-10">

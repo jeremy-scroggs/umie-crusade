@@ -40,6 +40,16 @@ describe('HUD organism', () => {
     ).toBeDefined();
   });
 
+  it('renders the speed-control group', () => {
+    render(<HUD />);
+    expect(screen.getByRole('group', { name: 'Game speed' })).toBeDefined();
+    // All four speed presets are present.
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeDefined();
+    expect(screen.getByRole('button', { name: '1×' })).toBeDefined();
+    expect(screen.getByRole('button', { name: '2×' })).toBeDefined();
+    expect(screen.getByRole('button', { name: '4×' })).toBeDefined();
+  });
+
   it('does NOT show the ISE HAI! banner by default', () => {
     render(<HUD />);
     expect(screen.queryByTestId('hud-wave-banner')).toBeNull();

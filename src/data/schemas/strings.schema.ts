@@ -15,6 +15,12 @@ export const stringsDefSchema = z.object({
   'hud.heroHp': z.string().min(1),
   'hud.ability': z.string().min(1),
   'hud.abilityReady': z.string().min(1),
+  'hud.speed.pause': z.string().min(1),
+  'hud.speed.pauseAria': z.string().min(1),
+  'hud.speed.1x': z.string().min(1),
+  'hud.speed.2x': z.string().min(1),
+  'hud.speed.4x': z.string().min(1),
+  'hud.speed.groupAria': z.string().min(1),
 
   'menu.start': z.string().min(1),
   'menu.settings': z.string().min(1),
