@@ -32,12 +32,16 @@ export const stringsDefSchema = z.object({
   'build.insufficientGold': z.string().min(1),
 
   'battle.waveStart': z.string().min(1),
+  'battle.charge': z.string().min(1),
+  'battle.scoutWarn': z.string().min(1),
   'battle.heroAbility': z.string().min(1),
   'battle.victory': z.string().min(1),
   'battle.defeat': z.string().min(1),
   'battle.defeatCreed': z.string().min(1),
+  'battle.creed': z.string().min(1),
   'battle.killConfirm': z.string().min(1),
   'battle.bossWave': z.string().min(1),
+  'battle.mojokaTaboo': z.string().min(1),
 
   'runEnd.statsWave': z.string().min(1),
   'runEnd.statsSkulls': z.string().min(1),
