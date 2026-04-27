@@ -1,7 +1,11 @@
 import type { EventEmitterLike } from '@/game/components';
 import type { WallDef } from '@/types';
 import { Building } from '@/game/entities/Building';
-import { GameEvents, type WallEventPayload } from './events';
+import {
+  GameEvents,
+  type WallDamagedPayload,
+  type WallEventPayload,
+} from './events';
 import type { Cell, Pathfinding } from './Pathfinding';
 
 /**
@@ -83,6 +87,7 @@ export type PlaceResult = PlaceSuccess | PlaceRejection;
 export type RepairFailure =
   | 'not-a-wall'
   | 'bad-amount'
+  | 'bad-cost'
   | 'at-max-hp'
   | 'insufficient-gold';
 
@@ -179,12 +184,31 @@ export class BuildingSystem {
 
     // Build the per-cell entity. Each Building owns its own emitter so
     // per-wall 'damaged'/'destroyed' events stay scoped to that wall;
-    // we forward the system-level `wall:destroyed` onto the shared bus
-    // (where Pathfinding listens) below.
+    // we forward the system-level `wall:destroyed` (where Pathfinding
+    // listens) and `wall:damaged` (where the Gukka AI in #30 listens)
+    // onto the shared bus below.
     const building = Building.fromDef(this.def, undefined, { x, y });
     building.emitter.on(GameEvents.WallDestroyed, (...args: unknown[]) => {
       this.walls.delete(key);
       this.emitter.emit(GameEvents.WallDestroyed, ...args);
+    });
+    // The per-Building Damageable emits 'damaged' on its own emitter
+    // (see Damageable.applyDamage). Re-publish as the system-level
+    // `wall:damaged` event with grid coords + current HP so listeners
+    // (Gukka auto-repair) don't have to hold a reference to every
+    // Building. Skip the broadcast on the killing blow — the wall
+    // 'destroyed' path covers that case (Damageable emits 'damaged'
+    // BEFORE setting the `dead` flag, so we test current hp directly).
+    building.emitter.on('damaged', () => {
+      const breakable = building.breakable;
+      if (breakable.hp <= 0) return;
+      const damagedPayload: WallDamagedPayload = {
+        x,
+        y,
+        hp: breakable.hp,
+        maxHp: breakable.maxHp,
+      };
+      this.emitter.emit(GameEvents.WallDamaged, damagedPayload);
     });
     this.walls.set(key, building);
 
@@ -266,6 +290,73 @@ export class BuildingSystem {
       cell: { x: cell.x, y: cell.y },
       hpRestored: restored,
       cost,
+    };
+  }
+
+  /**
+   * Auto-repair entry-point used by the Gukka AI (#30). Distinct from
+   * `tryRepairWall` so the unit-supplied flat `costGold` (read from
+   * `gukka.json`'s `repairCostGold`) is debited rather than the wall
+   * def's per-HP cost. Manual repair (`tryRepairWall`) is unchanged —
+   * both APIs coexist.
+   *
+   * Order of checks:
+   *   1. not-a-wall    — no placed wall at this cell
+   *   2. bad-amount    — `hpAmount` must be a positive integer
+   *   3. bad-cost      — `costGold` must be a non-negative integer
+   *   4. at-max-hp     — wall is already pristine
+   *   5. insufficient-gold — only check that mutates the store
+   *
+   * On success: debits `costGold`, heals the Breakable by
+   * `min(hpAmount, missing)`, returns `{ ok, cell, hpRestored, cost }`.
+   *
+   * Cost is paid as a flat fee per repair tick (matches the Gukka data
+   * model: one cost-tick repairs `repairAmount` HP). No per-HP
+   * scaling — the unit JSON owns the rate.
+   */
+  tryAutoRepairWall(
+    cell: Cell,
+    hpAmount: number,
+    costGold: number,
+  ): RepairResult {
+    const key = `${cell.x},${cell.y}`;
+    const building = this.walls.get(key);
+    if (!building) {
+      return { ok: false, reason: 'not-a-wall' };
+    }
+
+    if (!Number.isInteger(hpAmount) || hpAmount <= 0) {
+      return { ok: false, reason: 'bad-amount' };
+    }
+
+    if (!Number.isInteger(costGold) || costGold < 0) {
+      return { ok: false, reason: 'bad-cost' };
+    }
+
+    const breakable = building.breakable;
+    const missing = breakable.maxHp - breakable.hp;
+    if (missing <= 0) {
+      return { ok: false, reason: 'at-max-hp' };
+    }
+
+    const restorable = Math.min(hpAmount, missing);
+    const have = this.store.gold;
+    if (!this.store.spendGold(costGold)) {
+      return {
+        ok: false,
+        reason: 'insufficient-gold',
+        needed: costGold,
+        have,
+      };
+    }
+
+    const restored = breakable.heal(restorable);
+
+    return {
+      ok: true,
+      cell: { x: cell.x, y: cell.y },
+      hpRestored: restored,
+      cost: costGold,
     };
   }
 

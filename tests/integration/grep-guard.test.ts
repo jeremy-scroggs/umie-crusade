@@ -64,11 +64,16 @@ const SYSTEMS_DIR = resolve(__dirname, '../../src/game/systems');
  */
 const ALLOWLISTS: Readonly<Record<string, FileAllowlist>> = {
   'AI.ts': {
-    numerics: new Set(['6']),
+    numerics: new Set(['6', '1000']),
     rationale: {
       '6':
         'Default aggro radius in tiles for the Orc FSM (multiplied by ' +
         'pxPerCell). Structural — every real run overrides via ctor opts.',
+      '1000':
+        'Milliseconds-per-second unit conversion for the Gukka repair ' +
+        'cooldown (`def.repairCooldownMs / 1000` → seconds). Structural ' +
+        'unit math, not balance — the actual cadence comes from ' +
+        'gukka.json#repairCooldownMs.',
     },
   },
   'Pathfinding.ts': {

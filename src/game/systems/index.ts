@@ -11,6 +11,7 @@ export { GameEvents } from './events';
 export type {
   GameEventName,
   WallEventPayload,
+  WallDamagedPayload,
   PathEventPayload,
   WaveCompletePayload,
   WaveStartPayload,
@@ -40,15 +41,20 @@ export type {
   RespawnSuccess,
   RespawnFailure,
 } from './Economy';
-export { AISystem, HumanState, OrcState } from './AI';
+export { AISystem, HumanState, OrcState, GukkaState } from './AI';
 export type {
   AISystemOptions,
   HumanInstance,
   OrcInstance,
+  GukkaInstance,
   HumanBehavior,
   OrcBehavior,
+  GukkaBehavior,
   HumanStateName,
   OrcStateName,
+  GukkaStateName,
+  GukkaStoreLike,
+  GukkaBuildingSystem,
 } from './AI';
 export { BuildingSystem } from './Building';
 export type {

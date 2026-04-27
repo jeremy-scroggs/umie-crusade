@@ -60,4 +60,11 @@ export const unitDefSchema = z.object({
   goldDrop: z.number().nonnegative().optional(),
   kind: unitKindSchema.optional(),
   role: unitRoleSchema.optional(),
+  // Builder-role repair tuning (issue #30). Optional so non-builder
+  // units (grunt/brute/peon/skowt/mojoka) stay valid; the Gukka AI
+  // branch reads them at runtime and bails idle if absent. All values
+  // come from the unit JSON — no balance numbers in code.
+  repairAmount: z.number().int().positive().optional(),
+  repairCooldownMs: z.number().nonnegative().optional(),
+  repairCostGold: z.number().int().nonnegative().optional(),
 });

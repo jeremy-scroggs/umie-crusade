@@ -507,3 +507,153 @@ describe('BuildingSystem — tryRepairWall', () => {
     expect(result.cost).toBe(28);
   });
 });
+
+describe('BuildingSystem — wall:damaged forwarder (#30)', () => {
+  it('forwards a placed wall\'s `damaged` event to the shared bus with grid coords', () => {
+    const map = corridor(5);
+    const emitter = new SimpleEventEmitter();
+    const pf = new Pathfinding(map, emitter);
+    const store = makeStore(def.buildCost.gold * 5);
+    const sys = new BuildingSystem({ def, pathfinding: pf, emitter, store });
+    const cell = { x: 1, y: 0 };
+    expect(sys.tryPlaceWall(cell).ok).toBe(true);
+
+    const onDamaged = vi.fn();
+    emitter.on(GameEvents.WallDamaged, onDamaged);
+
+    const wall = sys.buildingAt(cell)!;
+    wall.breakable.applyDamage(15);
+
+    expect(onDamaged).toHaveBeenCalledTimes(1);
+    expect(onDamaged).toHaveBeenCalledWith({
+      x: 1,
+      y: 0,
+      hp: def.hp - 15,
+      maxHp: def.hp,
+    });
+  });
+
+  it('does NOT emit `wall:damaged` for the killing blow (only `wall:destroyed`)', () => {
+    const map = corridor(3);
+    const emitter = new SimpleEventEmitter();
+    const pf = new Pathfinding(map, emitter);
+    const store = makeStore(def.buildCost.gold * 5);
+    const sys = new BuildingSystem({ def, pathfinding: pf, emitter, store });
+    const cell = { x: 1, y: 0 };
+    sys.tryPlaceWall(cell);
+
+    const onDamaged = vi.fn();
+    const onDestroyed = vi.fn();
+    emitter.on(GameEvents.WallDamaged, onDamaged);
+    emitter.on(GameEvents.WallDestroyed, onDestroyed);
+
+    sys.buildingAt(cell)!.breakable.applyDamage(def.hp + 50);
+
+    expect(onDestroyed).toHaveBeenCalledTimes(1);
+    expect(onDamaged).not.toHaveBeenCalled();
+  });
+});
+
+describe('BuildingSystem — tryAutoRepairWall (#30)', () => {
+  function placeOne(): {
+    sys: BuildingSystem;
+    pf: Pathfinding;
+    store: ReturnType<typeof makeStore>;
+    emitter: SimpleEventEmitter;
+    cell: { x: number; y: number };
+  } {
+    const map = corridor(5);
+    const emitter = new SimpleEventEmitter();
+    const pf = new Pathfinding(map, emitter);
+    const store = makeStore(def.buildCost.gold * 50);
+    const sys = new BuildingSystem({ def, pathfinding: pf, emitter, store });
+    const cell = { x: 1, y: 0 };
+    const r = sys.tryPlaceWall(cell);
+    if (!r.ok) throw new Error(`fixture: placement failed: ${r.reason}`);
+    return { sys, pf, store, emitter, cell };
+  }
+
+  it('debits the unit-supplied flat cost (not per-HP) and heals up to hpAmount', () => {
+    const { sys, store, cell } = placeOne();
+    const building = sys.buildingAt(cell)!;
+    building.breakable.applyDamage(30);
+
+    const goldBefore = store.gold;
+    const result = sys.tryAutoRepairWall(cell, 8, 1);
+
+    expect(result).toEqual({
+      ok: true,
+      cell,
+      hpRestored: 8,
+      cost: 1,
+    });
+    expect(building.breakable.hp).toBe(def.hp - 22);
+    // Flat cost — independent of hp restored.
+    expect(store.gold).toBe(goldBefore - 1);
+  });
+
+  it('caps hpRestored at the missing HP', () => {
+    const { sys, store, cell } = placeOne();
+    const building = sys.buildingAt(cell)!;
+    building.breakable.applyDamage(3);
+    const goldBefore = store.gold;
+
+    const result = sys.tryAutoRepairWall(cell, 50, 2);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.hpRestored).toBe(3);
+    expect(result.cost).toBe(2);
+    expect(building.breakable.hp).toBe(def.hp);
+    // Flat cost is debited even though we restored < hpAmount HP.
+    expect(store.gold).toBe(goldBefore - 2);
+  });
+
+  it('rejects insufficient-gold without applying any heal', () => {
+    const { sys, store, cell } = placeOne();
+    const building = sys.buildingAt(cell)!;
+    building.breakable.applyDamage(20);
+    const hpBefore = building.breakable.hp;
+    store.setGold(0);
+
+    const result = sys.tryAutoRepairWall(cell, 8, 5);
+
+    expect(result).toEqual({
+      ok: false,
+      reason: 'insufficient-gold',
+      needed: 5,
+      have: 0,
+    });
+    expect(store.gold).toBe(0);
+    expect(building.breakable.hp).toBe(hpBefore);
+  });
+
+  it('rejects bad-amount / bad-cost / at-max-hp / not-a-wall', () => {
+    const { sys, cell } = placeOne();
+    expect(sys.tryAutoRepairWall(cell, 8, 1)).toEqual({ ok: false, reason: 'at-max-hp' });
+
+    sys.buildingAt(cell)!.breakable.applyDamage(10);
+    expect(sys.tryAutoRepairWall(cell, 0, 1)).toEqual({ ok: false, reason: 'bad-amount' });
+    expect(sys.tryAutoRepairWall(cell, -1, 1)).toEqual({ ok: false, reason: 'bad-amount' });
+    expect(sys.tryAutoRepairWall(cell, 1.5, 1)).toEqual({ ok: false, reason: 'bad-amount' });
+    expect(sys.tryAutoRepairWall(cell, 1, -1)).toEqual({ ok: false, reason: 'bad-cost' });
+    expect(sys.tryAutoRepairWall(cell, 1, 1.5)).toEqual({ ok: false, reason: 'bad-cost' });
+
+    expect(sys.tryAutoRepairWall({ x: 4, y: 0 }, 5, 1)).toEqual({
+      ok: false,
+      reason: 'not-a-wall',
+    });
+  });
+
+  it('accepts costGold === 0 as a no-cost auto-repair', () => {
+    const { sys, store, cell } = placeOne();
+    sys.buildingAt(cell)!.breakable.applyDamage(10);
+    const goldBefore = store.gold;
+
+    const result = sys.tryAutoRepairWall(cell, 5, 0);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.cost).toBe(0);
+    expect(store.gold).toBe(goldBefore);
+  });
+});

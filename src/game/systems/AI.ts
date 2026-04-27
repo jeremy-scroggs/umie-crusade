@@ -7,7 +7,8 @@ import type { Building } from '@/game/entities/Building';
 import type { TargetLike, Vec2 } from '@/game/entities/Projectile';
 import type { Cell, Pathfinding } from './Pathfinding';
 import type { DamageSystem, MeleeAttackerLike } from './Damage';
-import { GameEvents } from './events';
+import { GameEvents, type WallDamagedPayload } from './events';
+import type { RepairResult } from './Building';
 
 /**
  * AI — behavior-layer system for Orc + Human entities.
@@ -53,6 +54,20 @@ export const OrcState = {
 } as const;
 export type OrcStateName = (typeof OrcState)[keyof typeof OrcState];
 
+/**
+ * Gukka FSM (#30). Builder-role orcs idle until a `wall:damaged` event
+ * gives them a target, walk to the wall, then call into BuildingSystem's
+ * auto-repair loop. The FSM is intentionally additive — it lives
+ * alongside the fighter-orc FSM (`OrcState`) and is driven by a
+ * separate `registerGukka` so the existing combat path is untouched.
+ */
+export const GukkaState = {
+  Idle: 'idle',
+  MoveToRepair: 'move-to-repair',
+  Repairing: 'repairing',
+} as const;
+export type GukkaStateName = (typeof GukkaState)[keyof typeof GukkaState];
+
 /** A Human entity with an associated world cell (supplied on register). */
 export interface HumanInstance {
   readonly entity: Human;
@@ -63,6 +78,31 @@ export interface HumanInstance {
 export interface OrcInstance {
   readonly entity: Orc;
   readonly cell: Cell;
+}
+
+/**
+ * Gukka instance — same shape as `OrcInstance` (Gukkas are Orcs under
+ * the hood). A separate alias keeps the call sites self-documenting:
+ * `registerGukka(...)` vs `registerOrc(...)`.
+ */
+export type GukkaInstance = OrcInstance;
+
+/**
+ * Minimal store contract for the Gukka gold-gate. Mirrors
+ * `BuildingStoreLike` but shares the type only by structure so AI.ts
+ * doesn't need to import the `BuildingSystem` types eagerly.
+ */
+export interface GukkaStoreLike {
+  readonly gold: number;
+}
+
+/**
+ * The slice of `BuildingSystem` AI needs to drive Gukka repairs. We
+ * inject only the auto-repair entry-point so AI never reaches into the
+ * placement / manual-repair surface.
+ */
+export interface GukkaBuildingSystem {
+  tryAutoRepairWall(cell: Cell, hpAmount: number, costGold: number): RepairResult;
 }
 
 export interface AISystemOptions {
@@ -116,6 +156,22 @@ export interface AISystemOptions {
    * Defaults to the set of humans registered via `registerHuman`.
    */
   humansProvider?: () => Iterable<HumanBehavior>;
+  /**
+   * Read-only gold source for the Gukka auto-repair gate. When present,
+   * Gukkas check `store.gold >= def.repairCostGold` before reacting to
+   * `wall:damaged`. When absent, no Gukka ever reacts (the gate fails
+   * closed). The actual gold debit happens inside
+   * `BuildingSystem.tryAutoRepairWall` — this option is only the
+   * pre-flight check.
+   */
+  store?: GukkaStoreLike;
+  /**
+   * BuildingSystem providing `tryAutoRepairWall(cell, hp, cost)`. When
+   * absent, Gukka repair attempts no-op (the FSM still moves through
+   * its states for tests that exercise transitions). In production the
+   * scene wires the real `BuildingSystem` here.
+   */
+  buildingSystem?: GukkaBuildingSystem;
 }
 
 /** Internal per-human state record. */
@@ -150,6 +206,23 @@ export interface OrcBehavior {
   stepCooldown: number;
   /** Seconds until next melee swing. */
   attackCooldown: number;
+  /** Current world cell (mutable as we step). */
+  cell: Cell;
+}
+
+/** Internal per-Gukka state record (#30). */
+export interface GukkaBehavior {
+  readonly instance: GukkaInstance;
+  state: GukkaStateName;
+  /**
+   * Wall cell currently being serviced (in `MoveToRepair` /
+   * `Repairing`). `null` while `Idle`.
+   */
+  targetWallCell: Cell | null;
+  /** Seconds until next tile step. */
+  stepCooldown: number;
+  /** Seconds until next repair tick (cadence from `def.repairCooldownMs`). */
+  repairCooldown: number;
   /** Current world cell (mutable as we step). */
   cell: Cell;
 }
@@ -212,14 +285,42 @@ export class AISystem {
   private readonly pathEmitter: EventEmitterLike;
   private readonly wallAt: (x: number, y: number) => Building | null;
   private readonly humansProvider: () => Iterable<HumanBehavior>;
+  private readonly store: GukkaStoreLike | undefined;
+  private readonly buildingSystem: GukkaBuildingSystem | undefined;
 
   private readonly humans: Map<Human, HumanBehavior> = new Map();
   private readonly orcs: Map<Orc, OrcBehavior> = new Map();
+  private readonly gukkas: Map<Orc, GukkaBehavior> = new Map();
 
   private readonly onPathInvalidated = (): void => {
     // Mark every human for re-path on next tick. Cheap + deterministic.
     for (const h of this.humans.values()) {
       h.needsRepath = true;
+    }
+  };
+
+  /**
+   * Shared-bus handler for `wall:damaged`. Every idle Gukka with
+   * sufficient gold latches onto the cell and transitions to
+   * `MoveToRepair`. Already-busy Gukkas ignore the event — they
+   * finish their current job first. Gold gate: if no `store` was
+   * supplied, every Gukka bails (fail-closed).
+   */
+  private readonly onWallDamaged = (...args: unknown[]): void => {
+    const payload = args[0] as WallDamagedPayload | undefined;
+    if (!payload) return;
+    if (this.gukkas.size === 0) return;
+    const targetCell: Cell = { x: payload.x, y: payload.y };
+    for (const g of this.gukkas.values()) {
+      if (g.state !== GukkaState.Idle) continue;
+      if (g.instance.entity.damageable.dead) continue;
+      const def = g.instance.entity.def;
+      const cost = def.repairCostGold;
+      if (cost === undefined) continue;
+      const gold = this.store?.gold ?? -1;
+      if (gold < cost) continue;
+      g.targetWallCell = targetCell;
+      g.state = GukkaState.MoveToRepair;
     }
   };
 
@@ -236,14 +337,22 @@ export class AISystem {
     this.pathEmitter = opts.pathEmitter ?? this.emitter;
     this.wallAt = opts.wallAt ?? (() => null);
     this.humansProvider = opts.humansProvider ?? (() => this.humans.values());
+    this.store = opts.store;
+    this.buildingSystem = opts.buildingSystem;
 
     this.pathEmitter.on(GameEvents.PathInvalidated, this.onPathInvalidated);
+    // The `wall:damaged` bus event is emitted by `BuildingSystem` (#30).
+    // Subscribe on the same `emitter` instance the BuildingSystem uses;
+    // tests / scenes pass the shared bus here.
+    this.emitter.on(GameEvents.WallDamaged, this.onWallDamaged);
   }
 
   destroy(): void {
     this.pathEmitter.off(GameEvents.PathInvalidated, this.onPathInvalidated);
+    this.emitter.off(GameEvents.WallDamaged, this.onWallDamaged);
     this.humans.clear();
     this.orcs.clear();
+    this.gukkas.clear();
   }
 
   /** Register a human — starts in `IDLE`; first tick triggers a path request. */
@@ -290,6 +399,36 @@ export class AISystem {
     this.orcs.delete(entity);
   }
 
+  /**
+   * Register a Gukka — starts in `Idle`. Throws when the unit's
+   * `role` is not `'builder'` so a fighter-orc can't be smuggled into
+   * the Gukka tick path.
+   */
+  registerGukka(instance: GukkaInstance): GukkaBehavior {
+    const existing = this.gukkas.get(instance.entity);
+    if (existing) return existing;
+    const role = instance.entity.def.role;
+    if (role !== 'builder') {
+      throw new Error(
+        `AISystem.registerGukka: '${instance.entity.def.id}' has role '${role ?? 'undefined'}', expected 'builder'`,
+      );
+    }
+    const behavior: GukkaBehavior = {
+      instance,
+      state: GukkaState.Idle,
+      targetWallCell: null,
+      stepCooldown: 0,
+      repairCooldown: 0,
+      cell: { x: instance.cell.x, y: instance.cell.y },
+    };
+    this.gukkas.set(instance.entity, behavior);
+    return behavior;
+  }
+
+  unregisterGukka(entity: Orc): void {
+    this.gukkas.delete(entity);
+  }
+
   /** Inspect a human's current behavior — for tests + UI. */
   humanBehavior(entity: Human): HumanBehavior | undefined {
     return this.humans.get(entity);
@@ -298,6 +437,25 @@ export class AISystem {
   /** Inspect an orc's current behavior — for tests + UI. */
   orcBehavior(entity: Orc): OrcBehavior | undefined {
     return this.orcs.get(entity);
+  }
+
+  /** Inspect a Gukka's current behavior — for tests + UI. */
+  gukkaBehavior(entity: Orc): GukkaBehavior | undefined {
+    return this.gukkas.get(entity);
+  }
+
+  /**
+   * Manual override for the Gukka auto-repair task. Called by the
+   * player-facing UI (HUD / tap-to-cancel) — drops the current target
+   * + cooldown and returns the FSM to `Idle`. No-op when the Gukka is
+   * already idle or when the entity is unknown to the AI.
+   */
+  cancelGukkaTask(entity: Orc): void {
+    const g = this.gukkas.get(entity);
+    if (!g) return;
+    g.state = GukkaState.Idle;
+    g.targetWallCell = null;
+    g.repairCooldown = 0;
   }
 
   /**
@@ -319,7 +477,7 @@ export class AISystem {
     return this.orcs.values();
   }
 
-  /** Per-tick step. Drives both FSMs. */
+  /** Per-tick step. Drives all FSMs. */
   update(dt: number): void {
     for (const h of this.humans.values()) {
       if (h.instance.entity.damageable.dead) continue;
@@ -328,6 +486,10 @@ export class AISystem {
     for (const o of this.orcs.values()) {
       if (o.instance.entity.damageable.dead) continue;
       this.tickOrc(o, dt);
+    }
+    for (const g of this.gukkas.values()) {
+      if (g.instance.entity.damageable.dead) continue;
+      this.tickGukka(g, dt);
     }
   }
 
@@ -637,26 +799,31 @@ export class AISystem {
   }
 
   /**
-   * One-tile cardinal step from `o.cell` toward `dest`. Only walks onto
-   * walkable tiles; if blocked, the orc simply stays put this tick (orcs
-   * don't use Pathfinding for now — this is the simple "intercept" the
-   * issue describes).
+   * One-tile cardinal step from `mover.cell` toward `dest`. Only walks
+   * onto walkable tiles; if blocked, the mover simply stays put this
+   * tick (orcs/gukkas don't use Pathfinding for now — this is the
+   * simple "intercept" the issue describes). Generic in the mover
+   * shape so both `OrcBehavior` and `GukkaBehavior` reuse it.
    */
-  private stepToward(o: OrcBehavior, dest: Cell, def: UnitDef): void {
-    const dx = dest.x - o.cell.x;
-    const dy = dest.y - o.cell.y;
+  private stepToward(
+    mover: { cell: Cell; stepCooldown: number },
+    dest: Cell,
+    def: UnitDef,
+  ): void {
+    const dx = dest.x - mover.cell.x;
+    const dy = dest.y - mover.cell.y;
     // Prefer the axis with the larger delta — keeps motion on cardinals.
-    let nx = o.cell.x;
-    let ny = o.cell.y;
+    let nx = mover.cell.x;
+    let ny = mover.cell.y;
     if (Math.abs(dx) >= Math.abs(dy) && dx !== 0) {
       nx += Math.sign(dx);
     } else if (dy !== 0) {
       ny += Math.sign(dy);
     }
-    if (nx === o.cell.x && ny === o.cell.y) return;
+    if (nx === mover.cell.x && ny === mover.cell.y) return;
     if (!this.pathfinding.isWalkable(nx, ny)) return;
-    o.cell = { x: nx, y: ny };
-    o.stepCooldown = this.secondsPerTile(def);
+    mover.cell = { x: nx, y: ny };
+    mover.stepCooldown = this.secondsPerTile(def);
   }
 
   private findNearestHumanInAggro(o: OrcBehavior): HumanBehavior | null {
@@ -677,6 +844,129 @@ export class AISystem {
     const speed = def.stats.speed;
     if (speed <= 0) return Number.POSITIVE_INFINITY;
     return this.pxPerCell / speed;
+  }
+
+  // ------------------------------------------------------------------
+  //                            Gukka FSM
+  // ------------------------------------------------------------------
+
+  private tickGukka(g: GukkaBehavior, dt: number): void {
+    g.stepCooldown = Math.max(0, g.stepCooldown - dt);
+    g.repairCooldown = Math.max(0, g.repairCooldown - dt);
+
+    switch (g.state) {
+      case GukkaState.Idle:
+        return;
+
+      case GukkaState.MoveToRepair:
+        this.gukkaMoveToRepair(g);
+        return;
+
+      case GukkaState.Repairing:
+        this.gukkaRepair(g);
+        return;
+    }
+  }
+
+  /**
+   * Move-to-repair tick. If the wall has vanished or is already pristine,
+   * fall back to Idle. When adjacent (Chebyshev ≤ 1), transition to
+   * `Repairing` and reset the repair cooldown so the first hit lands
+   * on entry.
+   */
+  private gukkaMoveToRepair(g: GukkaBehavior): void {
+    const cell = g.targetWallCell;
+    if (!cell) {
+      g.state = GukkaState.Idle;
+      return;
+    }
+    const wall = this.wallAt(cell.x, cell.y);
+    if (!wall || wall.breakable.dead) {
+      g.state = GukkaState.Idle;
+      g.targetWallCell = null;
+      return;
+    }
+    if (wall.breakable.hp >= wall.breakable.maxHp) {
+      g.state = GukkaState.Idle;
+      g.targetWallCell = null;
+      return;
+    }
+    if (chebyshev(g.cell, cell) <= this.meleeRangeTiles) {
+      g.state = GukkaState.Repairing;
+      g.repairCooldown = 0;
+      return;
+    }
+    if (g.stepCooldown > 0) return;
+    this.stepToward(g, cell, g.instance.entity.def);
+  }
+
+  /**
+   * Repairing tick. Calls `BuildingSystem.tryAutoRepairWall(...)` once
+   * per `def.repairCooldownMs` interval. Drops back to Idle when the
+   * wall reaches max HP, vanishes, or the player runs out of gold.
+   */
+  private gukkaRepair(g: GukkaBehavior): void {
+    const cell = g.targetWallCell;
+    if (!cell) {
+      g.state = GukkaState.Idle;
+      return;
+    }
+    const wall = this.wallAt(cell.x, cell.y);
+    if (!wall || wall.breakable.dead) {
+      g.state = GukkaState.Idle;
+      g.targetWallCell = null;
+      return;
+    }
+    if (wall.breakable.hp >= wall.breakable.maxHp) {
+      g.state = GukkaState.Idle;
+      g.targetWallCell = null;
+      return;
+    }
+    // Out of melee range (e.g. dragged off by some future shove
+    // interaction) — re-approach.
+    if (chebyshev(g.cell, cell) > this.meleeRangeTiles) {
+      g.state = GukkaState.MoveToRepair;
+      return;
+    }
+    if (g.repairCooldown > 0) return;
+
+    const def = g.instance.entity.def;
+    const amount = def.repairAmount;
+    const cost = def.repairCostGold;
+    const cooldownMs = def.repairCooldownMs;
+    if (amount === undefined || cost === undefined || cooldownMs === undefined) {
+      // Non-builder unit smuggled in — bail safely.
+      g.state = GukkaState.Idle;
+      g.targetWallCell = null;
+      return;
+    }
+
+    const sys = this.buildingSystem;
+    if (!sys) {
+      // No BuildingSystem wired — nothing to debit / heal. Stay in
+      // Repairing but back off so we don't busy-loop; the test seam
+      // pattern matches the rest of the file (no-op + eventual exit
+      // when the wall is healed externally).
+      g.repairCooldown = cooldownMs / 1000;
+      return;
+    }
+
+    const result = sys.tryAutoRepairWall(cell, amount, cost);
+    if (!result.ok) {
+      // Insufficient gold or any other failure → drop to Idle and let
+      // a future `wall:damaged` re-trigger when the player can afford
+      // it again. This keeps the FSM strictly forward-progress.
+      g.state = GukkaState.Idle;
+      g.targetWallCell = null;
+      g.repairCooldown = 0;
+      return;
+    }
+
+    g.repairCooldown = cooldownMs / 1000;
+    if (wall.breakable.hp >= wall.breakable.maxHp) {
+      g.state = GukkaState.Idle;
+      g.targetWallCell = null;
+    }
   }
 }
 

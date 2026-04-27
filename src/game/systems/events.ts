@@ -18,6 +18,15 @@ export const GameEvents = {
   /** Emitted when a wall is destroyed at a grid cell. */
   WallDestroyed: 'wall:destroyed',
   /**
+   * Emitted by `BuildingSystem` whenever a placed wall takes damage. The
+   * payload carries grid coords + current/max HP so listeners (e.g. the
+   * Gukka auto-repair AI in #30) can decide whether to react without
+   * re-querying the building. Forwarded from each Building's per-instance
+   * emitter onto the shared bus so cross-system consumers don't need to
+   * subscribe to every Building individually. Payload: `WallDamagedPayload`.
+   */
+  WallDamaged: 'wall:damaged',
+  /**
    * Emitted by the pathfinding system when its path cache has been
    * invalidated (e.g. after a wall change). Consumers should drop any
    * cached path handles.
@@ -87,6 +96,20 @@ export interface WallEventPayload {
   x: number;
   /** Grid-cell y coordinate (row). */
   y: number;
+}
+
+/**
+ * Payload for `wall:damaged`. Fired by `BuildingSystem` (#30) every time
+ * a placed wall takes damage. `hp` / `maxHp` are read from the building's
+ * `Breakable` immediately after the damage is applied so listeners can
+ * gate on a fraction (e.g. "only auto-repair below 50%") without poking
+ * the entity layer.
+ */
+export interface WallDamagedPayload {
+  x: number;
+  y: number;
+  hp: number;
+  maxHp: number;
 }
 
 /**
