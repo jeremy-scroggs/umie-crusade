@@ -7,6 +7,7 @@ import { WaveBadge } from '@/ui/atoms/WaveBadge';
 import { SkullCounter } from '@/ui/atoms/SkullCounter';
 import { HeroStatus } from '@/ui/molecules/HeroStatus';
 import { AbilityButton } from '@/ui/molecules/AbilityButton';
+import { tryHeroAbility } from '@/game/scenes/gameBridge';
 
 /**
  * Battle HUD overlay. Subscribes to `gameStore` for live values and
@@ -66,12 +67,11 @@ export function HUD() {
           readyAtMs={heroAbility.readyAtMs}
           nowMs={nowMs}
           onActivate={() => {
-            // The HUD does not directly trigger Clomp'uk — Hero glue
-            // wires the actual call to `Hero.tryUseAbility` and writes
-            // back into the store via `setHeroAbilityCooldown`. Keeping
-            // this as a no-op for now means the button still behaves
-            // (disabled while on cooldown) without coupling the UI to
-            // the Phaser entity layer.
+            // Dispatch through the game bridge — the bridge owns the
+            // Phaser-side wiring (hero entity + alive humans + cooldown
+            // store write-back). HUD stays React-pure; no Phaser
+            // import-time side effects leak into the DOM layer.
+            tryHeroAbility(Date.now());
           }}
         />
       </div>

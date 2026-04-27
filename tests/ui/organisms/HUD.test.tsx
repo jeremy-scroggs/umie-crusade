@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, render, screen, cleanup } from '@testing-library/react';
+import { act, render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { HUD } from '@/ui/organisms/HUD';
 import { useGameStore } from '@/state/gameStore';
 import { WAVE_START_BANNER_MS } from '@/lib/constants';
+import * as gameBridge from '@/game/scenes/gameBridge';
 
 describe('HUD organism', () => {
   beforeEach(() => {
@@ -61,6 +62,20 @@ describe('HUD organism', () => {
 
     expect(screen.queryByTestId('hud-wave-banner')).toBeNull();
     expect(useGameStore.getState().waveStartAtMs).toBe(null);
+  });
+
+  it('dispatches the hero ability via gameBridge.tryHeroAbility on click', () => {
+    const spy = vi
+      .spyOn(gameBridge, 'tryHeroAbility')
+      .mockReturnValue({ used: true, hits: [], stunUntilMs: 0 });
+    vi.setSystemTime(new Date(123456));
+    render(<HUD />);
+
+    const btn = screen.getByRole('button', { name: "Clomp'uk" });
+    fireEvent.click(btn);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(123456);
   });
 
   it('reflects ability cooldown updates from the store', () => {

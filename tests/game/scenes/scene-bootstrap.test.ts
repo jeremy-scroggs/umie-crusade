@@ -8,6 +8,8 @@ import {
   SimpleEventEmitter,
   type EventEmitterLike,
 } from '@/game/components';
+import type { Human } from '@/game/entities/Human';
+import type { Orc } from '@/game/entities/Orc';
 
 /**
  * Smoke-style boot test for the scene-bootstrap factory (#26).
@@ -106,6 +108,39 @@ describe('scene-bootstrap factory (#26)', () => {
     const payload = events[0]?.payload as { waveNumber?: number };
     expect(payload.waveNumber).toBe(1);
 
+    systems.destroy();
+  });
+
+  it('invokes onOrcPreplaced for each pre-placed orc and exposes the squad list', () => {
+    const bus = new SimpleEventEmitter();
+    const store = new FakeStore();
+    const orcs: Orc[] = [];
+    const systems = createSceneBootstrap({
+      emitter: bus,
+      store,
+      preplacedOrcCount: 3,
+      onOrcPreplaced: (orc) => orcs.push(orc),
+    });
+    expect(orcs.length).toBe(3);
+    expect(systems.preplacedOrcs.length).toBe(3);
+    expect(systems.preplacedOrcs[0]).toBe(orcs[0]);
+    systems.destroy();
+  });
+
+  it('invokes onHumanSpawned for each wave spawn', () => {
+    const bus = new SimpleEventEmitter();
+    const store = new FakeStore();
+    const seen: Human[] = [];
+    const systems = createSceneBootstrap({
+      emitter: bus,
+      store,
+      preplacedOrcCount: 0,
+      onHumanSpawned: (h) => seen.push(h),
+    });
+    systems.wave.start();
+    // Drive enough sim time for at least the first wave's first spawn.
+    for (let i = 0; i < 200; i += 1) systems.wave.update(0.1);
+    expect(seen.length).toBeGreaterThan(0);
     systems.destroy();
   });
 });

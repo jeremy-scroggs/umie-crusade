@@ -300,6 +300,25 @@ export class AISystem {
     return this.orcs.get(entity);
   }
 
+  /**
+   * Iterator over every registered human's behavior record. Lets the
+   * scene-side glue (e.g. the hero ability dispatch in `gameBridge`)
+   * collect candidate targets without poking the private map. Live
+   * iteration — callers that mutate during traversal must copy first.
+   */
+  allHumanBehaviors(): IterableIterator<HumanBehavior> {
+    return this.humans.values();
+  }
+
+  /**
+   * Iterator over every registered orc's behavior record. Symmetric
+   * with `allHumanBehaviors` — used by future systems that need to
+   * walk the orc set without reaching into the private map.
+   */
+  allOrcBehaviors(): IterableIterator<OrcBehavior> {
+    return this.orcs.values();
+  }
+
   /** Per-tick step. Drives both FSMs. */
   update(dt: number): void {
     for (const h of this.humans.values()) {
