@@ -69,3 +69,16 @@ constant, the asset pipeline, and the Tiled exports.
   stray balance literals in `src/game/systems/`. It does not scan
   config files — `TILE_SIZE = 32` in `src/game/config/tile.ts` is
   by design and out of scope for the guard.
+
+---
+
+## Map JSON dual-copy
+
+Each Tiled map ships in **two locations** that must stay byte-identical:
+`public/data/maps/<name>.json` (fetched at runtime by Phaser via
+`PreloadScene.load.tilemapTiledJSON` — Vite serves `public/` at the
+URL root) **and** `src/data/maps/<name>.json` (imported as a typed
+JSON module by `src/game/scenes/scene-bootstrap.ts` and several test
+suites under `tests/`). Deleting either copy breaks the runtime or
+the tests; when authoring a new map, write it to both paths.
+
