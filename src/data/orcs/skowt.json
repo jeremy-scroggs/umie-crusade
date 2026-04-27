@@ -1,0 +1,16 @@
+{
+  "id": "skowt",
+  "name": "Skowt",
+  "category": "ranged",
+  "faction": "orc",
+  "stats": { "hp": 50, "dps": 7, "speed": 90, "armor": 0 },
+  "cost": { "gold": 30, "trainTime": 5 },
+  "respawnCost": { "gold": 18, "time": 12 },
+  "sprite": "orcs/skowt.png",
+  "animations": ["idle", "walk", "attack", "death"],
+  "abilities": [],
+  "unlockRequirement": null,
+  "flavor": "Umies! Klerg jat!",
+  "kind": "skowt",
+  "role": "scout"
+}
