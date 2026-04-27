@@ -1,0 +1,15 @@
+{
+  "id": "rangers-of-justice",
+  "name": "Rangers of Justice",
+  "category": "ranged",
+  "faction": "human",
+  "stats": { "hp": 30, "dps": 6, "speed": 75, "armor": 1 },
+  "cost": { "gold": 0, "trainTime": 0 },
+  "sprite": "humans/rangers-of-justice.png",
+  "animations": ["idle", "walk", "attack", "death"],
+  "abilities": ["volley"],
+  "unlockRequirement": null,
+  "flavor": "Loose! Loose on the line!",
+  "goldDrop": 8,
+  "role": "fighter"
+}

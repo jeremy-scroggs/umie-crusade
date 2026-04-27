@@ -1,0 +1,15 @@
+{
+  "id": "order-of-honor",
+  "name": "Order of Honor",
+  "category": "melee",
+  "faction": "human",
+  "stats": { "hp": 60, "dps": 8, "speed": 60, "armor": 3 },
+  "cost": { "gold": 0, "trainTime": 0 },
+  "sprite": "humans/order-of-honor.png",
+  "animations": ["idle", "walk", "attack", "death"],
+  "abilities": ["gate-charge"],
+  "unlockRequirement": null,
+  "flavor": "For the front gate! No tricks, no traps!",
+  "goldDrop": 12,
+  "role": "fighter"
+}
