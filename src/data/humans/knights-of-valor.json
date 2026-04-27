@@ -1,0 +1,15 @@
+{
+  "id": "knights-of-valor",
+  "name": "Knights of Valor",
+  "category": "melee",
+  "faction": "human",
+  "stats": { "hp": 90, "dps": 10, "speed": 55, "armor": 4 },
+  "cost": { "gold": 0, "trainTime": 0 },
+  "sprite": "humans/knights-of-valor.png",
+  "animations": ["idle", "walk", "attack", "death"],
+  "abilities": ["no-retreat"],
+  "unlockRequirement": null,
+  "flavor": "We do not yield! Forward, on the demons!",
+  "goldDrop": 18,
+  "role": "fighter"
+}

@@ -1,0 +1,15 @@
+{
+  "id": "paladins-of-compassion",
+  "name": "Paladins of Compassion",
+  "category": "healer",
+  "faction": "human",
+  "stats": { "hp": 50, "dps": 4, "speed": 65, "armor": 2 },
+  "cost": { "gold": 0, "trainTime": 0 },
+  "sprite": "humans/paladins-of-compassion.png",
+  "animations": ["idle", "walk", "attack", "death"],
+  "abilities": ["heal", "escort-wounded"],
+  "unlockRequirement": null,
+  "flavor": "Hold, brother — the light is with you!",
+  "goldDrop": 14,
+  "role": "caster"
+}
