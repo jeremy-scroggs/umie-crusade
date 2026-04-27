@@ -1,0 +1,16 @@
+{
+  "id": "wall-stone",
+  "name": "Stone Wall",
+  "category": "wall-stone",
+  "hp": 250,
+  "armor": 3,
+  "buildCost": { "gold": 60 },
+  "repairCost": { "goldPerHp": 2 },
+  "damageStates": [
+    { "hpThreshold": 1.0, "sprite": "buildings/wall-stone-pristine.png" },
+    { "hpThreshold": 0.66, "sprite": "buildings/wall-stone-cracked.png" },
+    { "hpThreshold": 0.33, "sprite": "buildings/wall-stone-crumbling.png" }
+  ],
+  "sprite": "buildings/wall-stone-pristine.png",
+  "flavor": "Klop hard."
+}

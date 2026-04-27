@@ -1,0 +1,17 @@
+{
+  "id": "gate",
+  "name": "Gate",
+  "category": "gate",
+  "hp": 120,
+  "armor": 1,
+  "buildCost": { "gold": 40 },
+  "repairCost": { "goldPerHp": 1 },
+  "damageStates": [
+    { "hpThreshold": 1.0, "sprite": "buildings/gate-closed.png" },
+    { "hpThreshold": 0.66, "sprite": "buildings/gate-battered.png" },
+    { "hpThreshold": 0.33, "sprite": "buildings/gate-breached.png" }
+  ],
+  "sprite": "buildings/gate-closed.png",
+  "passableByTeam": "orc",
+  "flavor": "Open for da hai!"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "watchtower",
+  "name": "Watchtower",
+  "category": "watchtower",
+  "hp": 90,
+  "armor": 1,
+  "buildCost": { "gold": 70 },
+  "combat": {
+    "range": 220,
+    "damage": 8,
+    "attackRate": 1.0,
+    "projectileSpeed": 280
+  },
+  "sightRadius": 360,
+  "sprite": "buildings/watchtower.png",
+  "flavor": "Skowt see far!"
+}
