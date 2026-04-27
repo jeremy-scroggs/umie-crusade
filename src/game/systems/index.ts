@@ -49,7 +49,6 @@ export type {
   OrcBehavior,
   HumanStateName,
   OrcStateName,
-  WallLike,
 } from './AI';
 export { BuildingSystem } from './Building';
 export type {

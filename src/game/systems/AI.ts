@@ -53,17 +53,6 @@ export const OrcState = {
 } as const;
 export type OrcStateName = (typeof OrcState)[keyof typeof OrcState];
 
-/** Structural shape a Building wall needs to expose to be an attackable target. */
-export interface WallLike {
-  readonly breakable: {
-    readonly damageable: {
-      readonly dead: boolean;
-      applyDamage(amount: number): number;
-    };
-  };
-  readonly cell: Cell;
-}
-
 /** A Human entity with an associated world cell (supplied on register). */
 export interface HumanInstance {
   readonly entity: Human;
@@ -121,7 +110,7 @@ export interface AISystemOptions {
    * Returning `null` means the block is permanent (e.g. terrain) — the
    * human falls back to `IDLE`.
    */
-  wallAt?: (x: number, y: number) => WallLike | null;
+  wallAt?: (x: number, y: number) => Building | null;
   /**
    * Source of all currently alive humans — used by orc aggro scan.
    * Defaults to the set of humans registered via `registerHuman`.
@@ -144,7 +133,7 @@ export interface HumanBehavior {
   /** Seconds until this human's next melee swing. */
   attackCooldown: number;
   /** Wall currently targeted by `ATTACK_WALL`, if any. */
-  targetWall: WallLike | null;
+  targetWall: Building | null;
   /** Orc currently targeted by `ATTACK_ORC`, if any. */
   targetOrc: OrcBehavior | null;
   /** Current world cell (mirrors `instance.cell`; mutable as we step). */
@@ -178,7 +167,7 @@ function asAttacker(entity: Orc | Human): MeleeAttackerLike {
  * The DamageSystem only reads `damageable`; `position` is kept honest
  * for future projectile-based targeting.
  */
-function wallTarget(wall: WallLike, pxPerCell: number): TargetLike {
+function wallTarget(wall: Building, pxPerCell: number): TargetLike {
   const position: Vec2 = {
     x: (wall.cell.x + 0.5) * pxPerCell,
     y: (wall.cell.y + 0.5) * pxPerCell,
@@ -221,7 +210,7 @@ export class AISystem {
   private readonly pathfinding: Pathfinding;
   private readonly damage: DamageSystem;
   private readonly pathEmitter: EventEmitterLike;
-  private readonly wallAt: (x: number, y: number) => WallLike | null;
+  private readonly wallAt: (x: number, y: number) => Building | null;
   private readonly humansProvider: () => Iterable<HumanBehavior>;
 
   private readonly humans: Map<Human, HumanBehavior> = new Map();
@@ -672,6 +661,3 @@ export class AISystem {
   }
 }
 
-// Re-export the Building type constraint so callers can construct WallLikes
-// from Building entities without pulling more internals.
-export type { Building };

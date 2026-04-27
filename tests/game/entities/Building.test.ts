@@ -9,25 +9,28 @@ import type { BuildingDef } from '@/types';
 const wallDef = wallWood as BuildingDef;
 const towerDef = ballista as BuildingDef;
 
+/** Default cell used by tests that don't care about grid position. */
+const cell0 = { x: 0, y: 0 };
+
 describe('Building.fromDef (wall)', () => {
   it('reads hp/armor from the def and reports wall category', () => {
-    const b = Building.fromDef(wallDef);
+    const b = Building.fromDef(wallDef, undefined, cell0);
     expect(b.category).toBe('wall');
     expect(b.breakable.maxHp).toBe(wallDef.hp);
   });
 
   it('exposes damageStates via the wall getter', () => {
-    const b = Building.fromDef(wallDef);
+    const b = Building.fromDef(wallDef, undefined, cell0);
     expect(b.damageStates.length).toBeGreaterThan(0);
   });
 
   it('throws when accessing combat on a wall', () => {
-    const b = Building.fromDef(wallDef);
+    const b = Building.fromDef(wallDef, undefined, cell0);
     expect(() => b.combat).toThrow();
   });
 
   it('transitions through damage state sprites as HP drops', () => {
-    const b = Building.fromDef(wallDef);
+    const b = Building.fromDef(wallDef, undefined, cell0);
     const before = b.breakable.currentSprite();
     b.breakable.applyDamage(Math.floor(wallDef.hp * 0.5));
     const after = b.breakable.currentSprite();
@@ -37,25 +40,25 @@ describe('Building.fromDef (wall)', () => {
 
 describe('Building.fromDef (tower)', () => {
   it('reads hp/armor from the def and reports tower category', () => {
-    const b = Building.fromDef(towerDef);
+    const b = Building.fromDef(towerDef, undefined, cell0);
     expect(b.category).toBe('tower');
     expect(b.breakable.maxHp).toBe(towerDef.hp);
   });
 
   it('exposes combat block via the tower getter', () => {
-    const b = Building.fromDef(towerDef);
+    const b = Building.fromDef(towerDef, undefined, cell0);
     if (towerDef.category !== 'tower') throw new Error('fixture drift');
     expect(b.combat.range).toBe(towerDef.combat.range);
     expect(b.combat.damage).toBe(towerDef.combat.damage);
   });
 
   it('throws when accessing damageStates on a tower', () => {
-    const b = Building.fromDef(towerDef);
+    const b = Building.fromDef(towerDef, undefined, cell0);
     expect(() => b.damageStates).toThrow();
   });
 
   it("tower's Breakable falls back to the def sprite (no damageStates)", () => {
-    const b = Building.fromDef(towerDef);
+    const b = Building.fromDef(towerDef, undefined, cell0);
     expect(b.breakable.currentSprite()).toBe(towerDef.sprite);
   });
 });
@@ -71,17 +74,6 @@ describe('Building.fromDef (cell binding — wall destruction)', () => {
 
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledWith({ x: 3, y: 5 });
-  });
-
-  it('does NOT re-emit wall:destroyed when no cell was provided', () => {
-    const emitter = new SimpleEventEmitter();
-    const spy = vi.fn();
-    emitter.on(GameEvents.WallDestroyed, spy);
-
-    const b = Building.fromDef(wallDef, emitter);
-    b.breakable.applyDamage(wallDef.hp + 50);
-
-    expect(spy).not.toHaveBeenCalled();
   });
 
   it('emits wall:destroyed only once even with extra damage hits', () => {

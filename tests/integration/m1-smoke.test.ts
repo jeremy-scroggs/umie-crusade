@@ -13,7 +13,6 @@ import type {
   FortCoreLike,
   SpawnEdgeCells,
   TiledMapLike,
-  WallLike,
 } from '@/game/systems';
 import { Human } from '@/game/entities/Human';
 import { Orc } from '@/game/entities/Orc';
@@ -153,13 +152,9 @@ function buildHarness(opts: { fortHp: number; orcCount: number }): SmokeHarness 
     spawns: [edges.N, edges.S, edges.W],
   });
 
-  // Adapter: Building → WallLike. Building already exposes `breakable` and
-  // an optional `cell`; this thin adapter narrows the type.
-  function wallAt(x: number, y: number): WallLike | null {
-    const b = building.buildingAt({ x, y });
-    if (!b || !b.cell) return null;
-    return { breakable: b.breakable, cell: b.cell };
-  }
+  // AI consumes Building directly (#28) — no adapter needed.
+  const wallAt = (x: number, y: number) =>
+    building.buildingAt({ x, y }) ?? null;
 
   const ai = new AISystem({
     pathfinding,

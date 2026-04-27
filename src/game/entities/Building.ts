@@ -16,13 +16,13 @@ import { GameEvents, type WallEventPayload } from '@/game/systems/events';
  *
  * All stats (hp, armor, combat, damage thresholds) come from the def.
  *
- * Grid cell binding (#15): when constructed with a `cell`, the entity
- * subscribes to its Breakable's `'destroyed'` event and re-emits the
- * system-level `wall:destroyed` event with `{x,y}` on its own emitter
- * so the surrounding system (BuildingSystem / Pathfinding) can react.
- * Walls instantiated without a cell (older tests, towers) skip the
- * re-emit. Each Building owns its own emitter by default to keep
- * per-wall `'damaged'` events from bleeding across instances.
+ * Grid cell binding (#15, tightened in #28): every Building is bound to
+ * a `cell` at construction. The entity subscribes to its Breakable's
+ * `'destroyed'` event and re-emits the system-level `wall:destroyed`
+ * event with `{x,y}` on its own emitter so the surrounding system
+ * (BuildingSystem / Pathfinding) can react. Each Building owns its own
+ * emitter by default to keep per-wall `'damaged'` events from bleeding
+ * across instances.
  */
 /** Grid cell — duplicated locally to avoid a Pathfinding import here. */
 export interface BuildingCell {
@@ -35,14 +35,14 @@ export class Building {
   readonly emitter: EventEmitterLike;
   readonly breakable: Breakable;
   readonly upgradeable: Upgradeable;
-  readonly cell?: BuildingCell;
+  readonly cell: BuildingCell;
 
   private constructor(
     def: BuildingDef,
     emitter: EventEmitterLike,
     breakable: Breakable,
     upgradeable: Upgradeable,
-    cell?: BuildingCell,
+    cell: BuildingCell,
   ) {
     this.def = def;
     this.emitter = emitter;
@@ -50,12 +50,10 @@ export class Building {
     this.upgradeable = upgradeable;
     this.cell = cell;
 
-    if (cell) {
-      const payload: WallEventPayload = { x: cell.x, y: cell.y };
-      this.emitter.on('destroyed', () => {
-        this.emitter.emit(GameEvents.WallDestroyed, payload);
-      });
-    }
+    const payload: WallEventPayload = { x: cell.x, y: cell.y };
+    this.emitter.on('destroyed', () => {
+      this.emitter.emit(GameEvents.WallDestroyed, payload);
+    });
   }
 
   get category(): BuildingDef['category'] {
@@ -84,8 +82,8 @@ export class Building {
 
   static fromDef(
     def: BuildingDef,
-    emitter?: EventEmitterLike,
-    cell?: BuildingCell,
+    emitter: EventEmitterLike | undefined,
+    cell: BuildingCell,
   ): Building {
     const ee: EventEmitterLike = emitter ?? new SimpleEventEmitter();
     const damageStates = def.category === 'wall' ? def.damageStates : [];

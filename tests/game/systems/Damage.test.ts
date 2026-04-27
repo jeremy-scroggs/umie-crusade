@@ -35,7 +35,7 @@ function makeTower(
   overrides?: Partial<BuildingDef['category'] extends 'tower' ? object : never>,
 ): TowerLike {
   void overrides;
-  const b = Building.fromDef(ballistaDef);
+  const b = Building.fromDef(ballistaDef, undefined, { x: 0, y: 0 });
   return { position, combat: b.combat };
 }
 

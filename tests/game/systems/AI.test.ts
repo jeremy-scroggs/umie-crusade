@@ -7,7 +7,7 @@ import {
   DamageSystem,
   GameEvents,
 } from '@/game/systems';
-import type { TiledMapLike, WallLike } from '@/game/systems';
+import type { TiledMapLike } from '@/game/systems';
 import { Orc } from '@/game/entities/Orc';
 import { Human } from '@/game/entities/Human';
 import { Building } from '@/game/entities/Building';
@@ -102,12 +102,11 @@ describe('AISystem — human state machine', () => {
 
     // Build a real wall-wood Building; wire its emitter so Damage can
     // detect `'died'` if we ever need it (not used directly here).
-    const wall = Building.fromDef(wallDef);
     const wallCell = { x: 2, y: 0 };
-    const wallLike: WallLike = { breakable: wall.breakable, cell: wallCell };
+    const wall = Building.fromDef(wallDef, undefined, wallCell);
 
-    const wallsByKey = new Map<string, WallLike>();
-    wallsByKey.set(`${wallCell.x},${wallCell.y}`, wallLike);
+    const wallsByKey = new Map<string, Building>();
+    wallsByKey.set(`${wallCell.x},${wallCell.y}`, wall);
 
     const ai = new AISystem({
       pathfinding: pf,
@@ -141,7 +140,7 @@ describe('AISystem — human state machine', () => {
     const hb = ai.humanBehavior(human)!;
     expect(hb.state).toBe(HumanState.AttackWall);
     expect(hb.cell).toEqual({ x: 1, y: 0 });
-    expect(hb.targetWall).toBe(wallLike);
+    expect(hb.targetWall).toBe(wall);
     const hpBefore = wall.breakable.damageable.hp;
     // Let the human swing a few times.
     for (let i = 0; i < 20; i += 1) ai.update(0.1);
