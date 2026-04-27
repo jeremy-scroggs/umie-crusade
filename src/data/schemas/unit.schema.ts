@@ -17,6 +17,33 @@ export const respawnCostSchema = z.object({
   time: z.number().nonnegative(),
 });
 
+// Coarse taxonomy bucket above `id`. Optional today: M1 fixtures
+// (`grunt`, `brute`, `peasant-levy`) predate the field. M2 unit
+// definitions (peon/gukka/skowt/mojoka) are expected to populate it,
+// and `grunt`/`brute` are kept in the enum so the existing roster can
+// adopt it later without a follow-up schema change.
+export const unitKindSchema = z.enum([
+  'grunt',
+  'brute',
+  'peon',
+  'gukka',
+  'skowt',
+  'mojoka',
+]);
+
+// Functional role that systems (AI, build menu, gather) branch on.
+// Distinct from `category` (which describes combat shape:
+// melee/ranged/caster/...) — `role` describes what the unit DOES in
+// the player's economy. Optional for the same backwards-compat reason
+// as `kind`.
+export const unitRoleSchema = z.enum([
+  'fighter',
+  'builder',
+  'gatherer',
+  'caster',
+  'scout',
+]);
+
 export const unitDefSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -31,4 +58,6 @@ export const unitDefSchema = z.object({
   unlockRequirement: z.string().nullable(),
   flavor: z.string(),
   goldDrop: z.number().nonnegative().optional(),
+  kind: unitKindSchema.optional(),
+  role: unitRoleSchema.optional(),
 });

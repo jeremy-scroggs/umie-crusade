@@ -5,7 +5,11 @@ import {
   towerDefSchema,
   buildingDefSchema,
 } from '@/data/schemas/building.schema';
-import { waveDefSchema } from '@/data/schemas/wave.schema';
+import {
+  waveDefSchema,
+  wavePatternSchema,
+  waveGeneratorConfigSchema,
+} from '@/data/schemas/wave.schema';
 import { heroDefSchema } from '@/data/schemas/hero.schema';
 import { stringsDefSchema } from '@/data/schemas/strings.schema';
 import grunt from '@/data/orcs/grunt.json';
@@ -54,6 +58,52 @@ describe('unit schema', () => {
   it('rejects invalid faction', () => {
     expect(
       unitDefSchema.safeParse({ ...grunt, faction: 'elf' }).success,
+    ).toBe(false);
+  });
+
+  it('accepts a unit with kind and role (M2)', () => {
+    const peon = {
+      ...grunt,
+      id: 'peon',
+      name: 'Peon',
+      category: 'builder',
+      kind: 'peon',
+      role: 'gatherer',
+    };
+    expect(unitDefSchema.safeParse(peon).success).toBe(true);
+  });
+
+  it('accepts each new M2 kind value', () => {
+    for (const kind of ['peon', 'gukka', 'skowt', 'mojoka'] as const) {
+      expect(
+        unitDefSchema.safeParse({ ...grunt, kind }).success,
+      ).toBe(true);
+    }
+  });
+
+  it('accepts each role value', () => {
+    for (const role of [
+      'fighter',
+      'builder',
+      'gatherer',
+      'caster',
+      'scout',
+    ] as const) {
+      expect(
+        unitDefSchema.safeParse({ ...grunt, role }).success,
+      ).toBe(true);
+    }
+  });
+
+  it('rejects an invalid kind', () => {
+    expect(
+      unitDefSchema.safeParse({ ...grunt, kind: 'demon' }).success,
+    ).toBe(false);
+  });
+
+  it('rejects an invalid role', () => {
+    expect(
+      unitDefSchema.safeParse({ ...grunt, role: 'tank' }).success,
     ).toBe(false);
   });
 });
@@ -115,6 +165,104 @@ describe('building schema', () => {
       buildingDefSchema.safeParse({ ...validWall, category: 'trap' }).success,
     ).toBe(false);
   });
+
+  const validStoneWall = {
+    id: 'wall-stone',
+    name: 'Stone Wall',
+    category: 'wall-stone',
+    hp: 250,
+    armor: 3,
+    buildCost: { gold: 60 },
+    repairCost: { goldPerHp: 2 },
+    damageStates: [
+      { hpThreshold: 1.0, sprite: 'buildings/wall-stone-pristine.png' },
+      { hpThreshold: 0.5, sprite: 'buildings/wall-stone-cracked.png' },
+    ],
+    sprite: 'buildings/wall-stone-pristine.png',
+    flavor: 'Klop hard.',
+  };
+
+  const validGate = {
+    id: 'gate-wood',
+    name: 'Wood Gate',
+    category: 'gate',
+    hp: 120,
+    armor: 1,
+    buildCost: { gold: 40 },
+    repairCost: { goldPerHp: 1 },
+    damageStates: [
+      { hpThreshold: 1.0, sprite: 'buildings/gate-wood-closed.png' },
+    ],
+    sprite: 'buildings/gate-wood-closed.png',
+    passableByTeam: 'orc' as const,
+    flavor: 'Open for the hai!',
+  };
+
+  const validWatchtower = {
+    id: 'watchtower',
+    name: 'Watchtower',
+    category: 'watchtower',
+    hp: 90,
+    armor: 1,
+    buildCost: { gold: 70 },
+    combat: {
+      range: 220,
+      damage: 12,
+      attackRate: 1.0,
+      projectileSpeed: 280,
+    },
+    sightRadius: 320,
+    sprite: 'buildings/watchtower.png',
+    flavor: 'See umie comin.',
+  };
+
+  it('accepts a valid stone wall (M2)', () => {
+    expect(buildingDefSchema.safeParse(validStoneWall).success).toBe(true);
+  });
+
+  it('accepts a valid gate with each passableByTeam value (M2)', () => {
+    for (const passableByTeam of ['orc', 'human', 'both', 'none'] as const) {
+      expect(
+        buildingDefSchema.safeParse({ ...validGate, passableByTeam }).success,
+      ).toBe(true);
+    }
+  });
+
+  it('accepts a valid watchtower (M2)', () => {
+    expect(buildingDefSchema.safeParse(validWatchtower).success).toBe(true);
+  });
+
+  it('rejects gate missing passableByTeam', () => {
+    const { passableByTeam: _unused, ...invalid } = validGate;
+    void _unused;
+    expect(buildingDefSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects gate with unknown passableByTeam value', () => {
+    expect(
+      buildingDefSchema.safeParse({ ...validGate, passableByTeam: 'elf' })
+        .success,
+    ).toBe(false);
+  });
+
+  it('rejects watchtower missing sightRadius', () => {
+    const { sightRadius: _unused, ...invalid } = validWatchtower;
+    void _unused;
+    expect(buildingDefSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects watchtower with non-positive sightRadius', () => {
+    expect(
+      buildingDefSchema.safeParse({ ...validWatchtower, sightRadius: 0 })
+        .success,
+    ).toBe(false);
+  });
+
+  it('rejects stone wall missing damageStates', () => {
+    const { damageStates: _unused, ...invalid } = validStoneWall;
+    void _unused;
+    expect(buildingDefSchema.safeParse(invalid).success).toBe(false);
+  });
 });
 
 describe('wave schema', () => {
@@ -158,6 +306,95 @@ describe('wave schema', () => {
   it('rejects non-integer count', () => {
     const bad = { ...valid, spawns: [{ ...valid.spawns[0], count: 1.5 }] };
     expect(waveDefSchema.safeParse(bad).success).toBe(false);
+  });
+});
+
+describe('wavePattern schema (M2)', () => {
+  const valid = {
+    id: 'rush',
+    units: [
+      { unitId: 'peasant-levy', weight: 3 },
+      { unitId: 'peasant-zealot', weight: 1 },
+    ],
+    edgeBias: ['N', 'W'] as const,
+    cry: 'battle.rushIncoming',
+  };
+
+  it('accepts a valid pattern', () => {
+    expect(wavePatternSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('accepts a pattern without cry', () => {
+    const { cry: _unused, ...noCry } = valid;
+    void _unused;
+    expect(wavePatternSchema.safeParse(noCry).success).toBe(true);
+  });
+
+  it('rejects empty units array', () => {
+    expect(
+      wavePatternSchema.safeParse({ ...valid, units: [] }).success,
+    ).toBe(false);
+  });
+
+  it('rejects a unit with zero weight', () => {
+    const bad = {
+      ...valid,
+      units: [{ unitId: 'peasant-levy', weight: 0 }],
+    };
+    expect(wavePatternSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it('rejects empty edgeBias', () => {
+    expect(
+      wavePatternSchema.safeParse({ ...valid, edgeBias: [] }).success,
+    ).toBe(false);
+  });
+
+  it('rejects an invalid edge in edgeBias', () => {
+    expect(
+      wavePatternSchema.safeParse({ ...valid, edgeBias: ['E'] }).success,
+    ).toBe(false);
+  });
+});
+
+describe('waveGeneratorConfig schema (M2)', () => {
+  const valid = {
+    id: 'm2-default',
+    waveCount: 10,
+    baseBudget: 50,
+    budgetGrowth: 15,
+    patterns: ['rush', 'wedge'],
+    rewardPerWave: { gold: 25 },
+  };
+
+  it('accepts a valid generator config', () => {
+    expect(waveGeneratorConfigSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('rejects zero waveCount', () => {
+    expect(
+      waveGeneratorConfigSchema.safeParse({ ...valid, waveCount: 0 }).success,
+    ).toBe(false);
+  });
+
+  it('rejects non-integer waveCount', () => {
+    expect(
+      waveGeneratorConfigSchema.safeParse({ ...valid, waveCount: 2.5 })
+        .success,
+    ).toBe(false);
+  });
+
+  it('rejects empty patterns array', () => {
+    expect(
+      waveGeneratorConfigSchema.safeParse({ ...valid, patterns: [] }).success,
+    ).toBe(false);
+  });
+
+  it('rejects negative budgetGrowth', () => {
+    expect(
+      waveGeneratorConfigSchema.safeParse({ ...valid, budgetGrowth: -1 })
+        .success,
+    ).toBe(false);
   });
 });
 
