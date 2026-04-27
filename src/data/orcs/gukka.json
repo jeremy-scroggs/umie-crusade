@@ -1,0 +1,19 @@
+{
+  "id": "gukka",
+  "name": "Gukka",
+  "category": "builder",
+  "faction": "orc",
+  "kind": "gukka",
+  "role": "builder",
+  "stats": { "hp": 50, "dps": 0, "speed": 50, "armor": 0 },
+  "cost": { "gold": 35, "trainTime": 6 },
+  "respawnCost": { "gold": 20, "time": 12 },
+  "sprite": "orcs/gukka.png",
+  "animations": ["idle", "walk", "repair", "death"],
+  "abilities": [],
+  "unlockRequirement": null,
+  "flavor": "Klop fix klop!",
+  "repairAmount": 8,
+  "repairCooldownMs": 2000,
+  "repairCostGold": 1
+}

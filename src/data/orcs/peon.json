@@ -1,0 +1,18 @@
+{
+  "id": "peon",
+  "name": "Peon",
+  "category": "fodder",
+  "faction": "orc",
+  "kind": "peon",
+  "role": "gatherer",
+  "stats": { "hp": 30, "dps": 0, "speed": 55, "armor": 0 },
+  "cost": { "gold": 20, "trainTime": 3 },
+  "respawnCost": { "gold": 10, "time": 8 },
+  "sprite": "orcs/peon.png",
+  "animations": ["idle", "walk", "gather", "death"],
+  "abilities": [],
+  "unlockRequirement": null,
+  "flavor": "Dig dig, gold gold.",
+  "gatherAmount": 5,
+  "gatherCooldownMs": 4000
+}
