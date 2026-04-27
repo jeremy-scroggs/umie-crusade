@@ -57,6 +57,35 @@ export const stringsDefSchema = z.object({
 
   'winScreen.title': z.string().min(1),
   'loseScreen.title': z.string().min(1),
+
+  // M2 unit display strings — name + flavor per fixture id
+  // (`src/data/orcs/`, `src/data/humans/`).
+  'ui.unit.peon.name': z.string().min(1),
+  'ui.unit.peon.flavor': z.string().min(1),
+  'ui.unit.gukka.name': z.string().min(1),
+  'ui.unit.gukka.flavor': z.string().min(1),
+  'ui.unit.skowt.name': z.string().min(1),
+  'ui.unit.skowt.flavor': z.string().min(1),
+  'ui.unit.mojoka.name': z.string().min(1),
+  'ui.unit.mojoka.flavor': z.string().min(1),
+  'ui.unit.order-of-honor.name': z.string().min(1),
+  'ui.unit.order-of-honor.flavor': z.string().min(1),
+  'ui.unit.rangers-of-justice.name': z.string().min(1),
+  'ui.unit.rangers-of-justice.flavor': z.string().min(1),
+
+  // M2 hero display strings — separate namespace from base unit because
+  // hero ids (e.g. `skowt-hero`) differ from grunt ids (`skowt`).
+  'ui.hero.skowt-hero.name': z.string().min(1),
+  'ui.hero.skowt-hero.flavor': z.string().min(1),
+  'ui.hero.mojoka-hero.name': z.string().min(1),
+  'ui.hero.mojoka-hero.flavor': z.string().min(1),
+
+  // M2 building display strings — name + flavor per fixture id
+  // (`src/data/buildings/`).
+  'ui.building.wall-wood.name': z.string().min(1),
+  'ui.building.wall-wood.flavor': z.string().min(1),
+  'ui.building.ballista.name': z.string().min(1),
+  'ui.building.ballista.flavor': z.string().min(1),
 });
 
 export type StringsDef = z.infer<typeof stringsDefSchema>;
